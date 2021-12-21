@@ -6,10 +6,15 @@ import os
 if __name__ == '__main__':
     tags = ['Time', 'Cd', 'Cs', 'Cl', 'CmRoll', 'CmPitch', 'CmYaw', 'Cd(f)', 'Cd(r)', 'Cs(f)', 'Cs(r)', 'Cl(f)',
             'Cl(r)']
+
+    os.chdir(os.getcwd().replace('scripts', ''))
+
     path = 'case/postProcessing/forceCoeffs1/0/coefficient.dat'
 
     force_coefficients = pd.DataFrame(np.loadtxt(path, skiprows=13),
                                       columns=tags)
+
+    os.chdir(os.getcwd().replace('scripts', ''))
 
     import argparse
 
@@ -60,5 +65,4 @@ if __name__ == '__main__':
                 ValueError(e)
         else:
             import time
-
-            time.sleep(args.rate)
+            time.sleep(10)

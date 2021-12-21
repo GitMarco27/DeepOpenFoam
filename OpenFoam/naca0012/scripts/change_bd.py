@@ -1,8 +1,9 @@
 import numpy as np
+import os
 
 if __name__ == '__main__':
     import argparse
-
+    os.chdir(os.getcwd().replace('scripts', ''))
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='')
 
@@ -15,7 +16,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    path_U = 'case/0/U'
+    path_U = os.path.join(os.getcwd(), 'case/0/U')
     path_ctrlDict = 'case/system/controlDict'
 
     print('--- Changing boundary conditions ---')
