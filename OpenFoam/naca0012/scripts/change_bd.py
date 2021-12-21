@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
     path_U = os.path.join(os.getcwd(), 'case/0/U')
     path_ctrlDict = 'case/system/controlDict'
+    path_geo = 'mesh/params.geo'
 
     print('--- Changing boundary conditions ---')
     print(f'- U: {args.U}')
@@ -71,3 +72,7 @@ if __name__ == '__main__':
     with open(path_ctrlDict, 'w') as f:
         for item in content:
             f.write(item)
+
+    with open(path_geo, 'w') as f:
+        f.write(f'aoa={args.a}; // flow angle')
+

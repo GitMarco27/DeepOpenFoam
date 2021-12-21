@@ -38,7 +38,7 @@ if __name__ == '__main__':
     while True:
         if os.path.exists(path):
             try:
-                print('updating...')
+                # print('updating...')
                 force_coefficients = pd.DataFrame(np.loadtxt(path, skiprows=13),
                                                   columns=tags)
                 cd[0].set_xdata(force_coefficients.Time)
@@ -65,4 +65,5 @@ if __name__ == '__main__':
                 ValueError(e)
         else:
             import time
+            # print(f'Waiting for: {path}')
             time.sleep(10)
