@@ -87,11 +87,6 @@ Field[1].Quads = 1;
 Field[1].IntersectMetrics = 0;
 BoundaryLayer Field = 1;
 
-// Physical Surface(201) = {201,202};  //Periodic at z = 0
-// Physical Surface(202) = {276, 234}; //Periodic at z = lc1
-// Physical Surface(203) = {271, 275, 263, 267}; //Farfield
-// Physical Volume(1)    = {1, 2};
-
 Physical Surface("outlet") = {263, 275, 267};
 Physical Surface("walls") = {};
 Physical Surface("inlet") = {271};
