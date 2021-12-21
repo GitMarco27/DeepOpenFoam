@@ -1,0 +1,1 @@
+aoa = 0;  // flow angle
