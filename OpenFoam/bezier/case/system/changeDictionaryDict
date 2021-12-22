@@ -20,7 +20,12 @@ boundary
         type patch;
         physicalType patch;
     }
-    airfoil
+    p_side
+    {
+        type wall;
+        physicalType wall;
+    }
+    s_side
     {
         type wall;
         physicalType wall;

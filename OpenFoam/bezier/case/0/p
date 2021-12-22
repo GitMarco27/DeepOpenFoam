@@ -37,7 +37,12 @@ boundaryField
         type            zeroGradient;
     }
 
-    airfoil
+    p_side
+    {
+        type            zeroGradient;
+    }
+
+    s_side
     {
         type            zeroGradient;
     }

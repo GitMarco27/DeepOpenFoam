@@ -29,7 +29,7 @@ deltaT          1;
 
 writeControl    timeStep;
 
-writeInterval   100;
+writeInterval   1000;
 
 purgeWrite      0;
 
@@ -52,9 +52,9 @@ functions
         type            forceCoeffs;
         libs            ("libforces.so");
         writeControl    timeStep;
-        writeInterval   100;
+        writeInterval   1000;
         log             true;
-        patches         (airfoil);
+        patches         ("s_side" "p_side");
         rho             rhoInf;      // Indicates incompressible.
         rhoInf          1.18;        // Redundant for incompressible (value does not matter).
         liftDir         (-0.03489949670250097 0.9993908270190958 0);
@@ -71,14 +71,24 @@ functions
         libs                    ("libsampling.so");
         surfaceFormat           raw;
         writeControl            timeStep;
-        writeInterval           100;
+        writeInterval           1000;
         interpolationScheme     cell;
         fields                  (p);
         log                     true;
-        surfaces                (airfoil
+        surfaces                (
+
+        p_side
         {
         type patch;
-        patches ("airfoil");
+        patches ("p_side");
+        interpolate true;
+        triangulate false;
+        }
+
+        s_side
+        {
+        type patch;
+        patches ("s_side");
         interpolate true;
         triangulate false;
         }
@@ -102,17 +112,17 @@ functions
     executeControl  timeStep;
     executeInterval 1;
     writeControl    timeStep;
-    writeInterval   100;
+    writeInterval   1000;
 }
 forces1
 {
     // Mandatory entries
     type            forces;
     libs            ("libforces.so");
-    patches         (airfoil);
+    patches         (s_side, p_side);
 
     writeControl    timeStep;
-    writeInterval   100;
+    writeInterval   1000;
 
 
     // Optional entries

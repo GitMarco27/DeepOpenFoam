@@ -38,7 +38,13 @@ boundaryField
         value           uniform 0;
     }
 
-    airfoil
+    p_side
+    {
+        type            nutUWallFunction;
+        value           uniform 0;
+    }
+
+    s_side
     {
         type            nutUWallFunction;
         value           uniform 0;

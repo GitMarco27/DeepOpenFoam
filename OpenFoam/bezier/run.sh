@@ -7,7 +7,7 @@ set -e
 python3 scripts/clean.py
 
 # Changing Boundary Conditions
-python3 scripts/change_bd.py --a -10 --U 45
+python3 scripts/change_bd.py --a 0 --U 45
 
 # Generate the mesh from script (msh2 format is currently the latest gmshToFoam recognizes):
 gmsh -3 -o main.msh -format msh2 mesh/bl_geometry.geo -nopopup

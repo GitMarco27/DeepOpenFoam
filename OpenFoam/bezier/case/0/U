@@ -37,7 +37,12 @@ boundaryField
         type            noSlip;
     }
 
-    airfoil
+    p_side
+    {
+        type            noSlip;
+    }
+
+    s_side
     {
         type            noSlip;
     }
