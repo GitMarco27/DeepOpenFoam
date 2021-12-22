@@ -22,17 +22,31 @@ nle = n; // point number of LE = no. of points on upper surface
          // Point(1) is trailing edge
 
 Point(1) = {xs, ys, 0, lc2};
-Point(2) = {ux1, uy1, 0, lc2};
-Point(3) = {ux2, uy2, 0, lc2};
-Point(4) = {ux3, uy3, 0, lc2};
-Point(5) = {xe, ye, 0, lc2};
+Point(2) = {x_u[1], y_u[1], 0, lc2};
+Point(3) = {x_u[2], y_u[2], 0, lc2};
+Point(4) = {x_u[3], y_u[3], 0, lc2};
+Point(5) = {x_u[4], y_u[4], 0, lc2};
+Point(6) = {x_u[5], y_u[5], 0, lc2};
+Point(7) = {x_u[6], y_u[6], 0, lc2};
+Point(8) = {x_u[7], y_u[7], 0, lc2};
+Point(9) = {x_u[8], y_u[8], 0, lc2};
+Point(10) = {x_u[9], y_u[9], 0, lc2};
+Point(11) = {x_u[10], y_u[10], 0, lc2};
+Point(12) = {xe, ye, 0, lc2};
 
-Point(6) = {lx1, ly1, 0, lc2};
-Point(7) = {lx2, ly2, 0, lc2};
-Point(8) = {lx3, ly3, 0, lc2};
+Point(13) = {x_l[1], y_l[1], 0, lc2};
+Point(14) = {x_l[2], y_l[2], 0, lc2};
+Point(15) = {x_l[3], y_l[3], 0, lc2};
+Point(16) = {x_l[4], y_l[4], 0, lc2};
+Point(17) = {x_l[5], y_l[5], 0, lc2};
+Point(18) = {x_l[6], y_l[6], 0, lc2};
+Point(19) = {x_l[7], y_l[7], 0, lc2};
+Point(20) = {x_l[8], y_l[8], 0, lc2};
+Point(21) = {x_l[9], y_l[9], 0, lc2};
+Point(22) = {x_l[10], y_l[10], 0, lc2};
 
-Bezier(1) = {1, 2, 3, 4, 5};
-Bezier(2) = {5, 8, 7, 6, 1};
+Bezier(1) = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+Bezier(2) = {12, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 1};
 
 Transfinite Line{1,2} = n Using Bump 0.2;
 
@@ -89,9 +103,9 @@ Extrude {0,0,Lce} { Surface{201,202}; Layers{1}; Recombine;}
 
 //Define Boundary Layer
 Field[1] = BoundaryLayer;
-Field[1].EdgesList = {1,2};  // Tags of curves in the geometric model for which a boundary layer is needed
+Field[1].EdgesList = {1, 2};  // Tags of curves in the geometric model for which a boundary layer is needed
 Field[1].AnisoMax = 1.0;  // Threshold angle for creating a mesh fan in the boundary layer
-Field[1].FanNodesList = {5};  // Tags of points in the geometric model for which a fan is created
+Field[1].FanNodesList = {12};  // Tags of points in the geometric model for which a fan is created
 Field[1].FanPointsSizesList = {12};  // Number of elements in the fan for each fan node. If not present default value Mesh.BoundaryLayerFanElements
 Field[1].hfar = 0.03;
 Field[1].hwall_n = 0.00002;
