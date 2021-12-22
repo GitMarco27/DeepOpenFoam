@@ -32,24 +32,22 @@ if __name__ == '__main__':
     p_s[:, 3] = (p_s[:, 3] - args.p_inf) / (0.5 * args.rho_inf * args.U ** 2)
     p_p[:, 3] = (p_p[:, 3] - args.p_inf) / (0.5 * args.rho_inf * args.U**2)
 
-
     plt.style.use('seaborn-darkgrid')
     fig = plt.figure(figsize=(8, 6))
     plt.scatter(p_p[:, 0], p_p[:, 3],
                 label='Pressure Side',
                 s=10,
-                # c=p_p[:, 3],
                 edgecolors='k',
                 cmap='viridis'
                 )
     plt.scatter(p_s[:, 0], p_s[:, 3],
                 label='Suction Side',
                 s=10,
-                # c=p_p[:, 3],
                 edgecolors='k',
                 cmap='viridis'
                 )
     plt.xlabel('x [m]')
     plt.ylabel('Cp [-]')
     plt.legend()
+    plt.gca().invert_yaxis()
     plt.show()
