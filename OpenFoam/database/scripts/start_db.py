@@ -33,6 +33,7 @@ if __name__ == '__main__':
     for i in tqdm(range(start, args.n)):
         with open('db_log.txt', 'a') as log:
             try:
+                os.system('chmod u+x run.sh')
                 subprocess.run(['./run.sh'], check=True)
                 conv_path = os.path.join('results', str(i), 'convergence.log')
                 with open(conv_path, 'r') as f:

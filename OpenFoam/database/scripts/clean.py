@@ -29,4 +29,8 @@ if __name__ == '__main__':
     delete_if_exists("case/VTK")
     delete_if_exists("log.simulation")
 
-    # print('Cleaning completed')
+    for file in os.listdir():
+        if '.out' in file:
+            delete_if_exists(file)
+
+            # print('Cleaning completed')
