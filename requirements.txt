@@ -3,3 +3,6 @@ matplotlib
 pandas
 plotly
 vtk
+tqdm
+torch
+torchsummary

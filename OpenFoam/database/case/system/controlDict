@@ -23,13 +23,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         10000;
+endTime         6000;
 
 deltaT          1;
 
 writeControl    timeStep;
 
-writeInterval   10000;
+writeInterval   6000;
 
 purgeWrite      0;
 
@@ -52,7 +52,7 @@ functions
         type            forceCoeffs;
         libs            ("libforces.so");
         writeControl    timeStep;
-        writeInterval   10000;
+        writeInterval   6000;
         log             true;
         patches         ("s_side" "p_side");
         rho             rhoInf;      // Indicates incompressible.
@@ -71,7 +71,7 @@ functions
         libs                    ("libsampling.so");
         surfaceFormat           raw;
         writeControl            timeStep;
-        writeInterval           10000;
+        writeInterval           6000;
         interpolationScheme     cell;
         fields                  (p);
         log                     true;
@@ -112,7 +112,7 @@ functions
     executeControl  timeStep;
     executeInterval 1;
     writeControl    timeStep;
-    writeInterval   10000;
+    writeInterval   6000;
 }
 forces1
 {
@@ -122,7 +122,7 @@ forces1
     patches         (s_side, p_side);
 
     writeControl    timeStep;
-    writeInterval   10000;
+    writeInterval   6000;
 
 
     // Optional entries
