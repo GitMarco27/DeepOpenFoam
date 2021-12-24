@@ -38,8 +38,8 @@ if __name__ == '__main__':
                 conv_path = os.path.join('results', str(i), 'convergence.log')
                 with open(conv_path, 'r') as f:
                     convergence = f.readlines()[0].split()
-                log.write(f'{i}\tTrue\t{convergence[0]}\t{convergence[1]}\t{convergence[2]}\t{convergence[3]}\t{convergence[4]}\n')
+                log.write(f'{i}\t1\t{convergence[0]}\t{convergence[1]}\t{convergence[2]}\t{convergence[3]}\t{convergence[4]}\n')
             except subprocess.CalledProcessError:
                 print(f'Error detected at iteration {i}')
                 os.mkdir(os.path.join('results', str(i))) if not os.path.exists(os.path.join('results', str(i))) else None
-                log.write(f'{i}\tFalse\t0\t0\t0\t0\t0\n')
+                log.write(f'{i}\t0\t0\t0\t0\t0\t0\n')

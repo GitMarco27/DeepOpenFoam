@@ -20,7 +20,7 @@ def convergence(threshold: int = 1000,
     results = {'cl': cl[-1],
                'cd': cd[-1]}
 
-    return (True, ratio, results) if (converged(cl) and converged(cd)) else (False, ratio, results)
+    return (1, ratio, results) if (converged(cl) and converged(cd)) else (0, ratio, results)
 
 
 if __name__ == '__main__':

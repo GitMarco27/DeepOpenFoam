@@ -9,7 +9,7 @@ Lo1 = 20.0;   // distance of intermediate inflow and outflow from origin
 
 Lce = 10;  // extrude size
 
-n  = 201; // points on upper/lower surface of airfoil used to define airfoil
+n  = 200; // points on upper/lower surface of airfoil used to define airfoil
 
 lc1 = 5.0;
 lc2 = 0.00001; // characteristic lengths of elements on airfoil and at farfield
