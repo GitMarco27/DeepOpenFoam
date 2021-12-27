@@ -91,7 +91,8 @@ class PointNetfeat(nn.Module):
     def __init__(self,
                  global_feat=True,
                  feature_transform=False,
-                 n_latents: int = 512):
+                 n_latents: int = 512,
+                 combined: bool = False):
         super(PointNetfeat, self).__init__()
         self.stn = STN3d()
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -103,6 +104,7 @@ class PointNetfeat(nn.Module):
         self.global_feat = global_feat
         self.feature_transform = feature_transform
         self.n_latents = n_latents
+        self.combined = combined
         if self.feature_transform:
             self.fstn = STNkd(k=64)
 
@@ -127,6 +129,13 @@ class PointNetfeat(nn.Module):
         x = self.bn3(self.conv3(x))
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, self.n_latents)
+
+        if self.combined:
+            x_class = x
+            x_seg = x.view(-1, self.n_latents, 1).repeat(1, 1, n_pts)
+            x_seg = torch.cat([x_seg, pointfeat], 1)
+            return x_class, x_seg
+
         if self.global_feat:
             return x, trans, trans_feat
         else:
@@ -193,6 +202,54 @@ class PointNetDenseCls(nn.Module):
         return x, trans, trans_feat
 
 
+class PointNetCombined(nn.Module):
+    def __init__(self,
+                 classes=2,
+                 fields=4,
+                 feature_transform=False,
+                 n_latents: int = 512):
+        super(PointNetCombined, self).__init__()
+        self.classes = classes
+        self.fields = fields
+        self.feature_transform = feature_transform
+        self.feat = PointNetfeat(global_feat=True,
+                                 combined=True,
+                                 feature_transform=feature_transform,
+                                 n_latents=n_latents)
+        self.conv1 = torch.nn.Conv1d(n_latents+64, 512, 1)
+        self.conv2 = torch.nn.Conv1d(512, 256, 1)
+        self.conv3 = torch.nn.Conv1d(256, 128, 1)
+        self.conv4 = torch.nn.Conv1d(128, self.fields, 1)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(128)
+        self.fc1 = nn.Linear(n_latents, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, self.classes)
+        self.dropout = nn.Dropout(p=0.3)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        n_pts = x.size()[2]
+        x_class, x_seg = self.feat(x)  # (Batch, latents+64, points)
+        x_seg = F.relu(self.bn1(self.conv1(x_seg)))
+        x_seg = F.relu(self.bn2(self.conv2(x_seg)))
+        x_seg = F.relu(self.bn3(self.conv3(x_seg)))
+        x_seg = self.conv4(x_seg)
+        x_seg = x_seg.transpose(2, 1).contiguous()
+        x_seg = F.relu(x_seg.view(-1, self.fields))
+        x_seg = x_seg.view(batchsize, n_pts, self.fields)
+
+        x_class = F.relu(self.bn4(self.fc1(x_class)))
+        x_class = F.relu(self.bn5(self.dropout(self.fc2(x_class))))
+        x_class = self.fc3(x_class)
+        x_class = F.relu(x_class)
+
+        return x_class, x_seg
+
+
 def feature_transform_regularizer(trans):
     d = trans.size()[1]
     batchsize = trans.size()[0]
@@ -230,5 +287,12 @@ if __name__ == '__main__':
     # summary(cls, input_size=(3, 400), batch_size=32, device='cpu')
 
     seg = PointNetDenseCls(k=3, feature_transform=True, n_latents=32)
-    out, _, _ = seg(sim_data)
+    out, trans, trans_feat = seg(sim_data)
     print('seg', out.size())
+
+    combined = PointNetCombined()
+    x_class, x_seg = combined(sim_data)
+    print('x_class', x_class.shape)  # (batch, classes)
+    print('x_seg', x_seg.shape)  # (batch, points, classes)
+
+

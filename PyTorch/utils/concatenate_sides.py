@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def concatenate_sides(suction_side, pressure_side):
+def concatenate_sides(suction_side: np.ndarray, pressure_side: np.ndarray):
     # A label is assigned to identify the side
     # 0: suction side
     # 1: pressure side
