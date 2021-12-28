@@ -188,11 +188,11 @@ if __name__ == '__main__':
 
     print('\n--- Final Df ---\n')
     print(df)
-    df.sort_values('val_r2', axis=1, inplace=True)
-    best_model = tf.keras.models.load(os.path.join(df.run_path[0], 'model'))
-    best_model.evaluate(test_data, [test_data, test_labels])
 
-    best_model.save(os.path.join(args.results_path, 'best_model'))
+    # df.sort_values('val_r2', axis=1, inplace=True)
+    # best_model = tf.keras.models.load(os.path.join(df.run_path[0], 'model'))
+    # best_model.evaluate(test_data, [test_data, test_labels])
+    # best_model.save(os.path.join(args.results_path, 'best_model'))
 
 
 
