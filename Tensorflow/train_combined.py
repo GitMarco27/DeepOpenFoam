@@ -173,7 +173,7 @@ if __name__ == '__main__':
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
             run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
-            save_weights_only=False, mode='auto', save_freq=int(np.round(train_data.shape[0]/run.batch_size, 0))*200,
+            save_weights_only=False, mode='auto', period=200,
             options=None,
         )
 
