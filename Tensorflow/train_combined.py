@@ -1,3 +1,17 @@
+import tensorflow as tf
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.info(tf.__version__)
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+try:
+    for gpu in tf.config.experimental.list_physical_devices("GPU"): tf.config.experimental.set_virtual_device_configuration(
+            gpu,
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12292)])
+except Exception as e:
+    logging.info(e)
+
+
 import argparse
 import json
 import os
@@ -137,6 +151,10 @@ if __name__ == '__main__':
     run_count = 0
     run_data = []
 
+    print('train data', train_data.shape)
+    print('validation data', val_data.shape)
+    print('test data', test_data.shape)
+
     for run in tqdm.tqdm(RunBuilder.get_runs(params)):
 
         run_count += 1
@@ -150,12 +168,12 @@ if __name__ == '__main__':
         print(f'\n Creating results path: {run_path}')
         os.mkdir(run_path)
 
-        log_dir = os.path.join(args.log_path, str(run).replace(" ", ""))
+        log_dir = os.path.join(args.log_path, str(run_count))
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
             run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
-            save_weights_only=False, mode='auto', save_freq='epoch',
+            save_weights_only=False, mode='auto', save_freq=int(np.round(train_data.shape[0]/run.batch_size, 0))*200,
             options=None,
         )
 
