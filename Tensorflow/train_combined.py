@@ -140,7 +140,10 @@ if __name__ == '__main__':
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-        model = create_pointnet_ae(run)
+        model = create_pointnet_ae(run,
+                                   grid_size= 4 ,
+                                   n_geometry_points = 400,
+                                   n_global_variables = 2, )
 
         model.summary()
 
@@ -150,7 +153,7 @@ if __name__ == '__main__':
         model.compile(
             optimizer=optimizer,
             loss=[chamfer_distance, tf.keras.metrics.mean_squared_error],
-            metrics=dict(output_2=[r_squared]),
+            metrics=dict(reg_gv=[r_squared]),
         )
 
         history = model.fit(train_data,
