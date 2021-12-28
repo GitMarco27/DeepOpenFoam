@@ -1,8 +1,14 @@
+import argparse
+import os
+from utils.chamfer_distance import chamfer_distance
+from itertools import product
+import tqdm
 import numpy as np
 import pandas as pd
-from keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import GridSearchCV, KFold, train_test_split
+from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from collections import OrderedDict, namedtuple
+import tensorflow as tf
 
 from Tensorflow.utils.concatenate_sides import concatenate_sides
 
@@ -18,11 +24,6 @@ def scale_y_points(x):
     x_y = x_norm[:, :, 1].reshape(-1, 1)
     min_v_y = min(x_y) + 0.2 * min(x_y)  # @TODO: beky => check this
     max_v_y = max(x_y) + 0.2 * max(x_y)
-
-    print('min y:', min(x_y))
-    print('max y:', max(x_y))
-    print('new min y:', min_v_y)
-    print('new max y:', max_v_y)
 
     x_scaled_y = (x_y - min_v_y / (max_v_y - min_v_y))
 
@@ -50,51 +51,98 @@ def load_data(path: str = 'dataset'):
     return normed_geometries_, normed_global_variables_, scaler_globals_
 
 
+class RunBuilder:
+    @staticmethod
+    def get_runs(params):
+        Run = namedtuple('Run', params.keys())
+
+        runs = []
+        for v in product(*params.values()):
+            runs.append(Run(*v))
+
+        return runs
+
+
+def handle_results_path():
+    if args.clear:
+        if os.path.exists(args.results_path):
+            os.system(f'rm -r {args.results_path}')
+            os.system(f'rm -r {args.log_path}')
+            os.mkdir(args.results_path)
+            os.mkdir(args.log_path)
+        else:
+            os.mkdir(args.results_path)
+            os.mkdir(args.log_path)
+    else:
+        if os.path.exists(args.results_path):
+            raise ValueError(f'{args.results_path} already exists')
+        else:
+            os.mkdir(args.results_path)
+            os.mkdir(args.log_path)
+
+
 if __name__ == '__main__':
-    normed_geometries, normed_global_variables, scaler_globals = load_data()
+    parser = argparse.ArgumentParser(description='Training, validation and testing of AE and 3D regressor')
+
+    # Required positional argument
+    parser.add_argument('--data_path', type=str,
+                        default='dataset',
+                        help='dataset path')
+
+    parser.add_argument('--results_path', type=str,
+                        default='results',
+                        help='results path')
+    parser.add_argument('--log_path', type=str,
+                        default='logs',
+                        help='log path')
+    parser.add_argument('--clear', type=bool,
+                        default=True,  # @TODO: change
+                        help='delete results path if exists')
+
+    args = parser.parse_args()
+
+    normed_geometries, normed_global_variables, scaler_globals = load_data(args.data_path)
 
     train_data, test_data, train_labels, test_labels = train_test_split(
         normed_geometries, normed_global_variables, test_size=0.2, random_state=22)
 
-    model = KerasClassifier(build_fn=create_model, verbose=1)
+    params = OrderedDict(
+        lr=[.01, .001],
+        batch_size=[32, ],
+        epochs=[5, ],
+        optimizer=['Adam', 'RMSprop', 'adadelta']
+    )
 
-    learning_rate = [0.0001, 0.001, 0.01]
-    dropout_rate = [0.0, ]
-    batch_size = [256, ]
-    epochs = [10, ]
-    neurons = [128, ]
-    activation = ['relu', ]
-    n_layers = [2, ]
-    seed = 22
+    handle_results_path()
 
-    # Make a dictionary of the grid search parameters
-    param_grid = dict(learning_rate=learning_rate,
-                      dropout_rate=dropout_rate,
-                      batch_size=batch_size,
-                      epochs=epochs,
-                      neurons=neurons,
-                      activation=activation,
-                      n_layers=n_layers)
+    for run in tqdm.tqdm(RunBuilder.get_runs(params)):
 
-    # Build and fit the GridSearchCV
-    grid = GridSearchCV(estimator=model, param_grid=param_grid,
-                        cv=KFold(
-                            random_state=seed,
-                            n_splits=5,
-                            shuffle=True
-                        ),
-                        verbose=10,
-                        n_jobs=-1)
+        print('--- New run detected ---')
 
-    grid_results = grid.fit(train_data, train_labels)  # @TODO: check GPU utilization
+        for key in run._asdict():
+            print(f'{key}: {run._asdict()[key]}')
 
-    print("Best: {0}, using {1} \n".format(grid_results.best_score_, grid_results.best_params_))
+        run_path = os.path.join(args.results_path, str(run).replace(" ", ""))
 
-    means = grid_results.cv_results_['mean_test_score']
-    stds = grid_results.cv_results_['std_test_score']
-    params = grid_results.cv_results_['params']
+        print(f'\n Creating results path: {run_path}')
+        os.mkdir(run_path)
 
-    final_model = grid_results.best_estimator_.model
-    final_model.evaluate(test_data, test_labels)
+        log_dir = os.path.join(args.log_path, str(run).replace(" ", ""))
+        os.mkdir(log_dir)
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    # @TODO: save model to file
+        model = create_model(run)
+
+        model.summary() if model is not None else None
+
+        optimizer = tf.keras.optimizers.get(run.optimizer)
+        optimizer.learning_rate = run.lr
+
+        model.compile(
+            optimizer=optimizer,
+            loss=[chamfer_distance, tf.keras.metrics.mean_squared_error],
+            metrics=None,
+        )
+
+
+
