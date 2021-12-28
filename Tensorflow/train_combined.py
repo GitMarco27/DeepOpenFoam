@@ -176,6 +176,7 @@ if __name__ == '__main__':
         results["val_loss"], results["val_loss_ae"], results["val_loss_reg"] = val_scores[0], val_scores[1], \
                                                                                val_scores[2]
         results["train_r2"], results["val_r2"] = train_scores[3], val_scores[3]
+        results["run_path"] = run_path
 
         for k, v in run._asdict().items(): results[k] = v
         run_data.append(results)
@@ -184,6 +185,14 @@ if __name__ == '__main__':
 
         with open(os.path.join(run_path, 'log.json'), 'w', encoding='utf-8') as f:
             json.dump([results], f, ensure_ascii=False, indent=4)
+
+    print('\n--- Final Df ---\n')
+    print(df)
+    df.sort_values('val_r2', axis=1, inplace=True)
+    best_model = tf.keras.models.load(os.path.join(df.run_path[0], 'model'))
+    best_model.evaluate(test_data, [test_data, test_labels])
+
+    best_model.save(os.path.join(args.results_path, 'best_model'))
 
 
 
