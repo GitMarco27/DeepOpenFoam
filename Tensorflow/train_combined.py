@@ -10,10 +10,23 @@ from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from collections import OrderedDict, namedtuple
 import tensorflow as tf
-from GitMarco.tf.metrics import r_squared
-from sklearn.metrics import r2_score
 from Tensorflow.utils.concatenate_sides import concatenate_sides
-from Tensorflow.utils.PointNetAE import  create_pointnet_ae
+from Tensorflow.utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
+
+
+def r_squared(y, y_pred):
+    """
+    :param y: true valuse (tf.Tensor or np.ndarray)
+    :param y_pred: predicted values (tf.Tensor or np.ndarray)
+    :return:
+
+    r2 score metric for tensorflow
+    """
+    residual = tf.reduce_sum(tf.square(tf.subtract(y, y_pred)))
+    total = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
+    r2 = tf.subtract(1.0, tf.math.divide(residual, total))
+    return r2
+
 
 def scale_y_points(x):
     # @TODO: how to denormalize data ?
@@ -107,15 +120,16 @@ if __name__ == '__main__':
         train_data, train_labels, test_size=0.1, shuffle=True)
 
     params = OrderedDict(
-        lr=[.01, .001],
-        batch_size=[32, ],
-        epochs=[5, ],
-        optimizer=['Adam', 'RMSprop', 'adadelta'],
-        type_decoder= ['dense', 'cnn'],
-        architectural_parameters = [[False, 0], [True, 1], [True, 5], [True, 10], [True, 15], [True, 20]], # [is_variational, beta],
-        encoding_size = [5,10,20,50,100],
-        ort_reg_bools = [[False,False], [True, False], [True, True]], #[feature_transform, orto_reg]
-        reg_drop_out_value = [0., 0.1, 0.3 , 0.5]
+        lr=[.01, .001, .0001],
+        batch_size=[64, 256],
+        epochs=[2500, ],
+        optimizer=['Adam'],
+        type_decoder=['dense', 'cnn'],
+        architectural_parameters=[[False, 0], [True, 1], [True, 5], [True, 10], [True, 15], [True, 20]],
+        # [is_variational, beta],
+        encoding_size=[5, 10, 20, 50, 100],
+        ort_reg_bools=[[False, False], [True, False], [True, True]],  # [feature_transform, orto_reg]
+        reg_drop_out_value=[0., 0.1, 0.3, 0.5]
     )
 
     handle_results_path()
@@ -126,12 +140,12 @@ if __name__ == '__main__':
     for run in tqdm.tqdm(RunBuilder.get_runs(params)):
 
         run_count += 1
-        print('--- New run detected ---')
+        print('\n--- New run detected ---')
 
         for key in run._asdict():
             print(f'{key}: {run._asdict()[key]}')
 
-        run_path = os.path.join(args.results_path, str(run).replace(" ", ""))
+        run_path = os.path.join(args.results_path, str(run_count))
 
         print(f'\n Creating results path: {run_path}')
         os.mkdir(run_path)
@@ -140,15 +154,15 @@ if __name__ == '__main__':
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
-            run_path+'/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
+            run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
             save_weights_only=False, mode='auto', save_freq='epoch',
             options=None,
         )
 
         model = create_pointnet_ae(run,
-                                   grid_size= 4 ,
-                                   n_geometry_points = 400,
-                                   n_global_variables = 2, )
+                                   grid_size=4,
+                                   n_geometry_points=400,
+                                   n_global_variables=2, )
 
         model.summary()
 
@@ -173,6 +187,12 @@ if __name__ == '__main__':
                             )
 
         model.save(os.path.join(run_path, 'model'))
+
+        model = tf.keras.models.load_model(os.path.join(run_path, 'checkpoint'),
+                                           custom_objects={'r_squared': r_squared,
+                                                           'chamfer_distance': chamfer_distance,
+                                                           'OrthogonalRegularizer': OrthogonalRegularizer,
+                                                           'Sampling': Sampling})
 
         train_scores = model.evaluate(train_data, [train_data, train_labels])
         val_scores = model.evaluate(val_data, [val_data, val_labels])
@@ -201,7 +221,3 @@ if __name__ == '__main__':
     # best_model = tf.keras.models.load(os.path.join(df.run_path[0], 'model'))
     # best_model.evaluate(test_data, [test_data, test_labels])
     # best_model.save(os.path.join(args.results_path, 'best_model'))
-
-
-
-

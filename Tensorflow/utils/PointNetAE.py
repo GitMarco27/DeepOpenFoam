@@ -3,6 +3,7 @@ import tensorflow as tf
 from abc import ABC
 import tensorflow.keras.backend as K
 
+
 class Sampling(tf.keras.layers.Layer):
     def call(self, inputs):
         mean, log_var = inputs
@@ -10,6 +11,7 @@ class Sampling(tf.keras.layers.Layer):
 
     def get_config(self):
         return {}
+
 
 def conv_bn(x, filters):
     x = tf.keras.layers.Conv1D(filters, kernel_size=1, padding="valid")(x)
@@ -25,6 +27,7 @@ def dense_bn(x, filters):
     x = tf.keras.layers.Dense(filters)(x)
     x = tf.keras.layers.BatchNormalization(momentum=0.0)(x)
     return tf.keras.layers.Activation("relu")(x)
+
 
 class OrthogonalRegularizer(tf.keras.regularizers.Regularizer, ABC):
     def __init__(self, num_features, l2reg=0.001):
@@ -45,6 +48,7 @@ class OrthogonalRegularizer(tf.keras.regularizers.Regularizer, ABC):
             # 'eye': self.eye
 
         }
+
 
 def t_network(inputs,
               num_features,
@@ -73,8 +77,8 @@ def t_network(inputs,
     return tf.keras.layers.Dot(axes=(2, 1))([inputs, feat_t])
 
 
-def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400, n_global_variables:int = 2, ):
-    params=params._asdict()
+def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400, n_global_variables: int = 2, ):
+    params = params._asdict()
     type_decoder = params['type_decoder']
     is_variational = params['architectural_parameters'][0]
     beta = params['architectural_parameters'][1]
@@ -82,7 +86,7 @@ def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400,
 
     orto_reg = params['ort_reg_bools'][1]
     feature_transform = params['ort_reg_bools'][0]
-    reg_drop_out_value= params['reg_drop_out_value']
+    reg_drop_out_value = params['reg_drop_out_value']
 
     string_name = 'AE'
 
@@ -111,7 +115,8 @@ def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400,
         codings_log_var = tf.keras.layers.Dense(encoding_size,
                                                 kernel_initializer=tf.keras.initializers.RandomNormal(mean=0.0,
                                                                                                       stddev=0.005,
-                                                                                                      seed=None))(input_v_cod)  # γ
+                                                                                                      seed=None))(
+            input_v_cod)  # γ
 
         # sample the corresponding Gaussian distribution
         coding = Sampling()([codings_mean, codings_log_var])
@@ -138,13 +143,17 @@ def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400,
         out = tf.keras.layers.Reshape([n_geometry_points, grid_size])(x)
         decoder_string = 'DecoderCNN'
 
-    elif type_decoder =='cnn':
-        x = tf.keras.layers.Dense(int(n_geometry_points/8)*64, activation= 'relu')(input_decoder)
+    elif type_decoder == 'cnn':
+        x = tf.keras.layers.Dense(int(n_geometry_points / 8) * 64, activation='relu')(input_decoder)
         x = tf.keras.layers.Reshape([50, 64])(x)
-        x = tf.keras.layers.Conv1DTranspose(filters= 64, kernel_size=3, activation='relu', strides=2, padding='same')(x) #output: [None,100, 64]
-        x = tf.keras.layers.Conv1DTranspose(filters= 32, kernel_size=3, activation='relu', strides=2, padding='same')(x) #output: [None,200, 32]
-        x = tf.keras.layers.Conv1DTranspose(filters= 32, kernel_size=3, activation='relu', strides=2, padding='same')(x) #output: [None,400, 16]
-        out = tf.keras.layers.Conv1DTranspose(filters= grid_size, kernel_size=3, activation='sigmoid', padding='same')(x) #output: [None,400, grid_size]
+        x = tf.keras.layers.Conv1DTranspose(filters=64, kernel_size=3, activation='relu', strides=2, padding='same')(
+            x)  # output: [None,100, 64]
+        x = tf.keras.layers.Conv1DTranspose(filters=32, kernel_size=3, activation='relu', strides=2, padding='same')(
+            x)  # output: [None,200, 32]
+        x = tf.keras.layers.Conv1DTranspose(filters=32, kernel_size=3, activation='relu', strides=2, padding='same')(
+            x)  # output: [None,400, 16]
+        out = tf.keras.layers.Conv1DTranspose(filters=grid_size, kernel_size=3, activation='sigmoid', padding='same')(
+            x)  # output: [None,400, grid_size]
         decoder_string = 'DecoderDense'
 
     decoder = tf.keras.Model(inputs=input_decoder, outputs=out, name=decoder_string)
@@ -160,9 +169,8 @@ def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400,
         cod = encoder(inputs)
         o1 = decoder(cod)
 
-
     # 4. Regression model
-    if n_global_variables>0:
+    if n_global_variables > 0:
         x = tf.keras.layers.Dense(encoding_size, activation='relu')(input_decoder)
         x = tf.keras.layers.Dropout(reg_drop_out_value)(x)
         x = tf.keras.layers.Dense(int(encoding_size / 2), activation='relu')(x)
@@ -178,25 +186,3 @@ def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400,
         model = tf.keras.Model(inputs=inputs, outputs=o1, name=string_name)
 
     return model
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
