@@ -11,12 +11,7 @@ from collections import OrderedDict, namedtuple
 import tensorflow as tf
 
 from Tensorflow.utils.concatenate_sides import concatenate_sides
-
-
-def create_model(params: dict):
-    model = None  # @TODO : beky => model as params function
-    return model
-
+from Tensorflow.utils.PointNetAE import  create_pointnet_ae
 
 def scale_y_points(x):
     # @TODO: how to denormalize data ?
@@ -110,7 +105,12 @@ if __name__ == '__main__':
         lr=[.01, .001],
         batch_size=[32, ],
         epochs=[5, ],
-        optimizer=['Adam', 'RMSprop', 'adadelta']
+        optimizer=['Adam', 'RMSprop', 'adadelta'],
+        type_decoder= ['dense', 'cnn'],
+        architectural_parameters = [[False, 0], [True, 1], [True, 5], [True, 10], [True, 15], [True, 20]], # [is_variational, beta],
+        encoding_size = [5,10,20,50,100],
+        ort_reg_bools = [[False,False], [True, False], [True, True]], #[feature_transform, orto_reg]
+        reg_drop_out_value = [0., 0.1, 0.3 , 0.5]
     )
 
     handle_results_path()
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-        model = create_model(run)
+        model = create_pointnet_ae(run)
 
         model.summary() if model is not None else None
 
