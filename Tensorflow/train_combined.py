@@ -24,8 +24,8 @@ from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from collections import OrderedDict, namedtuple
 import tensorflow as tf
-from Tensorflow.utils.concatenate_sides import concatenate_sides
-from Tensorflow.utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
+from utils.concatenate_sides import concatenate_sides
+from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
 
 
 def r_squared(y, y_pred):
