@@ -139,6 +139,11 @@ if __name__ == '__main__':
         log_dir = os.path.join(args.log_path, str(run).replace(" ", ""))
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
+            run_path+'/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
+            save_weights_only=False, mode='auto', save_freq='epoch',
+            options=None,
+        )
 
         model = create_model(run)
 
@@ -161,7 +166,7 @@ if __name__ == '__main__':
                             validation_data=(val_data,
                                              [val_data, val_labels]),
                             validation_batch_size=run.batch_size,
-                            callbacks=[tensorboard_callback]
+                            callbacks=[tensorboard_callback, checkpoints_callback]
                             )
 
         model.save(os.path.join(run_path, 'model'))
