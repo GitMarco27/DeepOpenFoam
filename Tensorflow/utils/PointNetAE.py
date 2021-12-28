@@ -73,7 +73,8 @@ def t_network(inputs,
     return tf.keras.layers.Dot(axes=(2, 1))([inputs, feat_t])
 
 
-def create_pointnet_ae(params: dict, grid_size: int= 3 , n_geometry_points: int = 400, n_global_variables:int = 2, ):
+def create_pointnet_ae(params, grid_size: int= 3 , n_geometry_points: int = 400, n_global_variables:int = 2, ):
+    params=params._asdict()
     type_decoder = params['type_decoder']
     is_variational = params['architectural_parameters'][0]
     beta = params['architectural_parameters'][1]
