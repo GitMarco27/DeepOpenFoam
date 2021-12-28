@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from utils.chamfer_distance import chamfer_distance
 from itertools import product
@@ -9,7 +10,8 @@ from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from collections import OrderedDict, namedtuple
 import tensorflow as tf
-
+from GitMarco.tf.metrics import r_squared
+from sklearn.metrics import r2_score
 from Tensorflow.utils.concatenate_sides import concatenate_sides
 from Tensorflow.utils.PointNetAE import  create_pointnet_ae
 
@@ -41,9 +43,9 @@ def load_data(path: str = 'dataset'):
 
     normed_global_variables_ = scaler_globals_.fit_transform(global_variables_)
 
-    normed_geometries_, min_value_y, max_value_x = scale_y_points(data)
+    normed_geometries_, min_value_y, max_value_y = scale_y_points(data)
 
-    return normed_geometries_, normed_global_variables_, scaler_globals_
+    return normed_geometries_, normed_global_variables_, scaler_globals_, min_value_y, max_value_y
 
 
 class RunBuilder:
@@ -96,10 +98,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    normed_geometries, normed_global_variables, scaler_globals = load_data(args.data_path)
+    normed_geometries, normed_global_variables, scaler_globals, min_y, max_y = load_data(args.data_path)
 
     train_data, test_data, train_labels, test_labels = train_test_split(
-        normed_geometries, normed_global_variables, test_size=0.2, random_state=22)
+        normed_geometries, normed_global_variables, test_size=0.1, shuffle=True)
+
+    train_data, val_data, train_labels, val_labels = train_test_split(
+        train_data, train_labels, test_size=0.1, shuffle=True)
 
     params = OrderedDict(
         lr=[.01, .001],
@@ -115,8 +120,12 @@ if __name__ == '__main__':
 
     handle_results_path()
 
+    run_count = 0
+    run_data = []
+
     for run in tqdm.tqdm(RunBuilder.get_runs(params)):
 
+        run_count += 1
         print('--- New run detected ---')
 
         for key in run._asdict():
@@ -133,7 +142,7 @@ if __name__ == '__main__':
 
         model = create_pointnet_ae(run)
 
-        model.summary() if model is not None else None
+        model.summary()
 
         optimizer = tf.keras.optimizers.get(run.optimizer)
         optimizer.learning_rate = run.lr
@@ -141,8 +150,50 @@ if __name__ == '__main__':
         model.compile(
             optimizer=optimizer,
             loss=[chamfer_distance, tf.keras.metrics.mean_squared_error],
-            metrics=None,
+            metrics=dict(output_2=[r_squared]),
         )
+
+        history = model.fit(train_data,
+                            [train_data, train_labels],
+                            batch_size=run.batch_size,
+                            epochs=run.epochs,
+                            shuffle=True,
+                            validation_data=(val_data,
+                                             [val_data, val_labels]),
+                            validation_batch_size=run.batch_size,
+                            callbacks=[tensorboard_callback]
+                            )
+
+        model.save(os.path.join(run_path, 'model'))
+
+        train_scores = model.evaluate(train_data, [train_data, train_labels])
+        val_scores = model.evaluate(val_data, [val_data, val_labels])
+
+        results = OrderedDict()
+        results["run"] = run_count
+        results["train_loss"], results["train_loss_ae"], results["train_loss_reg"] = train_scores[0], train_scores[1], \
+                                                                                     train_scores[2]
+        results["val_loss"], results["val_loss_ae"], results["val_loss_reg"] = val_scores[0], val_scores[1], \
+                                                                               val_scores[2]
+        results["train_r2"], results["val_r2"] = train_scores[3], val_scores[3]
+        results["run_path"] = run_path
+
+        for k, v in run._asdict().items(): results[k] = v
+        run_data.append(results)
+        df = pd.DataFrame.from_dict(run_data, orient='columns')
+        df.to_excel(os.path.join(args.results_path, 'results.xlsx'))
+
+        with open(os.path.join(run_path, 'log.json'), 'w', encoding='utf-8') as f:
+            json.dump([results], f, ensure_ascii=False, indent=4)
+
+    print('\n--- Final Df ---\n')
+    print(df)
+    df.sort_values('val_r2', axis=1, inplace=True)
+    best_model = tf.keras.models.load(os.path.join(df.run_path[0], 'model'))
+    best_model.evaluate(test_data, [test_data, test_labels])
+
+    best_model.save(os.path.join(args.results_path, 'best_model'))
+
 
 
 
