@@ -179,10 +179,12 @@ if __name__ == '__main__':
 
         for k, v in run._asdict().items(): results[k] = v
         run_data.append(results)
+        df = pd.DataFrame.from_dict(run_data, orient='columns')
+        df.to_excel(os.path.join(args.results_path, 'results.xlsx'))
 
-        with open('log.json', 'w', encoding='utf-8') as f:
+        with open(os.path.join(run_path, 'log.json'), 'w', encoding='utf-8') as f:
             json.dump([results], f, ensure_ascii=False, indent=4)
 
 
-    df = pd.DataFrame.from_dict(run_data, orient='columns')
+
 
