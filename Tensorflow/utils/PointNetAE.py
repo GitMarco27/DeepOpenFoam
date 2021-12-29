@@ -78,7 +78,7 @@ def t_network(inputs,
 
 
 def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400, n_global_variables: int = 2, ):
-    if type(params)!=dict:
+    if not isinstance(params, dict):
         params = params._asdict()
 
     type_decoder = params['type_decoder']
