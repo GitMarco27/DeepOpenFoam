@@ -141,7 +141,7 @@ def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400,
         x = tf.keras.layers.Dense(encoding_size * 16, activation='relu')(x)
         x = tf.keras.layers.Dense(n_geometry_points * grid_size, activation='sigmoid')(x)
         out = tf.keras.layers.Reshape([n_geometry_points, grid_size])(x)
-        decoder_string = 'DecoderCNN'
+        decoder_string = 'DecoderDense'
 
     elif type_decoder == 'cnn':
         x = tf.keras.layers.Dense(int(n_geometry_points / 8) * 64, activation='relu')(input_decoder)
@@ -154,7 +154,7 @@ def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400,
             x)  # output: [None,400, 16]
         out = tf.keras.layers.Conv1DTranspose(filters=grid_size, kernel_size=3, activation='sigmoid', padding='same')(
             x)  # output: [None,400, grid_size]
-        decoder_string = 'DecoderDense'
+        decoder_string = 'DecoderCNN'
 
     decoder = tf.keras.Model(inputs=input_decoder, outputs=out, name=decoder_string)
 
