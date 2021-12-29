@@ -9,7 +9,7 @@ try:
     for gpu in tf.config.experimental.list_physical_devices(
             "GPU"): tf.config.experimental.set_virtual_device_configuration(
         gpu,
-        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12292)])
+        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10000)])
 except Exception as e:
     logging.info(e)
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
         reg_drop_out_value=[0., 0.1, 0.3]
     )
 
-    handle_results_path()
+    # handle_results_path()
 
     run_count = args.start_index
     run_data = []
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         print(f'\n Creating results path: {run_path}')
         os.mkdir(run_path)
 
-        log_dir = os.path.join(args.log_path, str(run_count))
+        log_dir = os.path.join(args.log_path, f'{args.k}_{run_count}')
         os.mkdir(log_dir)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
