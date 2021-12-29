@@ -133,7 +133,7 @@ def single_run(run):
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
             run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
-            save_weights_only=False, mode='auto', period=200,
+            save_weights_only=False, mode='auto', period=200,  # @TODO
             options=None,
         )
 
@@ -157,6 +157,7 @@ def single_run(run):
                             [train_data, train_labels],
                             batch_size=run.batch_size,
                             epochs=run.epochs,
+                            # verbose=2,
                             shuffle=True,
                             validation_data=(val_data,
                                              [val_data, val_labels]),
@@ -196,14 +197,18 @@ def single_run(run):
 params = OrderedDict(
         lr=[.01, .001, .0001],
         batch_size=[64, 256],
-        epochs=[2500, ],
+        epochs=[6, ],
         optimizer=['Adam'],
         type_decoder=['dense', 'cnn'],
-        architectural_parameters=[[False, 0], [True, 1], [True, 5], [True, 10], [True, 15], [True, 20]],
+        architectural_parameters=[[False, 0], [True, 1], [True, 5], [True, 15]],
         # [is_variational, beta],
-        encoding_size=[5, 10, 20, 50, 100],
-        ort_reg_bools=[[False, False], [True, False], [True, True]],  # [feature_transform, orto_reg]
-        reg_drop_out_value=[0., 0.1, 0.3, 0.5]
+        encoding_size=[10, 20, 50, 100],
+        ort_reg_bools=[
+            # [False, False],
+            # [True, False],
+            [True, True]
+        ],  # [feature_transform, orto_reg]
+        reg_drop_out_value=[0., 0.1, 0.3]
     )
 Run = namedtuple('Run', params.keys())
 
@@ -245,7 +250,7 @@ if __name__ == '__main__':
     print('validation data', val_data.shape)
     print('test data', test_data.shape)
 
-    pool = Pool(processes=4)
+    pool = Pool(processes=5)
 
     pool.map(single_run, [(n, run_count, run_data, args,
                            train_data, train_labels,
