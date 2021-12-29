@@ -134,10 +134,10 @@ if __name__ == '__main__':
     normed_geometries, normed_global_variables, scaler_globals, min_y, max_y = load_data(args.data_path)
 
     train_data, test_data, train_labels, test_labels = train_test_split(
-        normed_geometries, normed_global_variables, test_size=0.1, shuffle=True)
+        normed_geometries, normed_global_variables, test_size=0.1, shuffle=True, random_state=22)
 
     train_data, val_data, train_labels, val_labels = train_test_split(
-        train_data, train_labels, test_size=0.1, shuffle=True)
+        train_data, train_labels, test_size=0.1, shuffle=True, random_state=22)
 
     params = OrderedDict(
         lr=[.01, .001, .0001],
