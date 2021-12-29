@@ -44,7 +44,6 @@ def r_squared(y, y_pred):
 
 
 def scale_y_points(x):
-    # @TODO: how to denormalize data ?
     x_norm = x.copy()
     x_y = x_norm[:, :, 1].reshape(-1, 1)
     min_v_y = min(x_y) + 0.2 * min(x_y)  # @TODO: beky => check this
@@ -137,11 +136,11 @@ if __name__ == '__main__':
         normed_geometries, normed_global_variables, test_size=0.1, shuffle=True, random_state=22)
 
     train_data, val_data, train_labels, val_labels = train_test_split(
-        train_data, train_labels, test_size=0.1, shuffle=True, random_state=22)
+        train_data, train_labels, test_size=0.1, shuffle=True)
 
     params = OrderedDict(
         lr=[.01, .001, .0001],
-        batch_size=[64, 256],
+        batch_size=[256, 128],
         epochs=[5000, ],
         optimizer=['Adam'],
         type_decoder=['dense', 'cnn'],
@@ -149,11 +148,11 @@ if __name__ == '__main__':
         # [is_variational, beta],
         encoding_size=[args.k, ],
         ort_reg_bools=[
-            # [False, False],
+            [False, False],
             # [True, False],
             [True, True]
         ],  # [feature_transform, orto_reg]
-        reg_drop_out_value=[0., 0.1, 0.3]
+        reg_drop_out_value=[0., ]
     )
 
     # handle_results_path()
@@ -180,6 +179,7 @@ if __name__ == '__main__':
 
         log_dir = os.path.join(args.log_path, f'{args.k}_{run_count}')
         os.mkdir(log_dir)
+        earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=400)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
             run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
@@ -211,7 +211,9 @@ if __name__ == '__main__':
                             validation_data=(val_data,
                                              [val_data, val_labels]),
                             validation_batch_size=run.batch_size,
-                            callbacks=[tensorboard_callback, checkpoints_callback]
+                            callbacks=[tensorboard_callback,
+                                       checkpoints_callback,
+                                       earlystop_callback]
                             )
 
         model.save(os.path.join(run_path, 'model'))
