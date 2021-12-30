@@ -4,7 +4,7 @@ from multiprocessing import Pool, Manager, Value
 import argparse
 import json
 import os
-from utils.chamfer_distance import chamfer_distance
+from utils.custom_objects import chamfer_distance
 from itertools import product
 import tqdm
 import numpy as np
@@ -15,7 +15,7 @@ from collections import OrderedDict, namedtuple
 import tensorflow as tf
 from utils.concatenate_sides import concatenate_sides
 from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
-
+from utils.custom_objects import r_squared
 logging.basicConfig(level=logging.INFO)
 logging.info(tf.__version__)
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
@@ -26,20 +26,6 @@ try:
             [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=40000)])
 except Exception as e:
     logging.info(e)
-
-
-def r_squared(y, y_pred):
-    """
-    :param y: true valuse (tf.Tensor or np.ndarray)
-    :param y_pred: predicted values (tf.Tensor or np.ndarray)
-    :return:
-
-    r2 score metric for tensorflow
-    """
-    residual = tf.reduce_sum(tf.square(tf.subtract(y, y_pred)))
-    total = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
-    r2 = tf.subtract(1.0, tf.math.divide(residual, total))
-    return r2
 
 
 def scale_y_points(x):

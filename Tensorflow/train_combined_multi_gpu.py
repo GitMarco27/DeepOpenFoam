@@ -16,7 +16,7 @@ except Exception as e:
 import argparse
 import json
 import os
-from utils.chamfer_distance import chamfer_distance
+from utils.custom_objects import chamfer_distance
 from itertools import product
 import tqdm
 import numpy as np
@@ -27,21 +27,7 @@ from collections import OrderedDict, namedtuple
 import tensorflow as tf
 from utils.concatenate_sides import concatenate_sides
 from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
-
-
-def r_squared(y, y_pred):
-    """
-    :param y: true valuse (tf.Tensor or np.ndarray)
-    :param y_pred: predicted values (tf.Tensor or np.ndarray)
-    :return:
-
-    r2 score metric for tensorflow
-    """
-    residual = tf.reduce_sum(tf.square(tf.subtract(y, y_pred)))
-    total = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
-    r2 = tf.subtract(1.0, tf.math.divide(residual, total))
-    return r2
-
+from utils.custom_objects import r_squared
 
 def scale_y_points(x):
     x_norm = x.copy()
