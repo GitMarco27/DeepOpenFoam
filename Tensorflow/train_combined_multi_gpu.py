@@ -217,6 +217,7 @@ if __name__ == '__main__':
                             )
 
         model.save(os.path.join(run_path, 'model'))
+        # Ciao
 
         model = tf.keras.models.load_model(os.path.join(run_path, 'checkpoint'),
                                            custom_objects={'r_squared': r_squared,
