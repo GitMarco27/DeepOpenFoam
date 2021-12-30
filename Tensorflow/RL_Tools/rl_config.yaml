@@ -1,0 +1,26 @@
+AE:
+  model_path: backup/results/13/checkpoint
+
+number_of_global_variables: 2
+steps_per_episode: 20
+delta_value: 20
+
+# Type action space
+# 1. BoxSpaceAction
+# 2. DiscreteAction
+action_space: DiscreteAction
+
+# type agent :
+# 1.
+# 2.
+# 3.
+type_agent: None
+
+#type reward
+# i tipi di reward sono defini attraverso le funzioni che troviamo nel file rewaed_functions
+# 1. step_reward
+# 2. best_value_reward
+# 3. min_value_reward
+# 4. max_value_reward
+# 5. final_start_value_reward
+type_rewards: final_start_value_reward
