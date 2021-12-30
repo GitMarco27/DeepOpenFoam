@@ -26,3 +26,16 @@ def chamfer_distance(x, y):
     distance = tf.reduce_mean(distance, axis=0)
     # print(distance)  # shape []
     return distance
+
+def r_squared(y, y_pred):
+    """
+    :param y: true valuse (tf.Tensor or np.ndarray)
+    :param y_pred: predicted values (tf.Tensor or np.ndarray)
+    :return:
+
+    r2 score metric for tensorflow
+    """
+    residual = tf.reduce_sum(tf.square(tf.subtract(y, y_pred)))
+    total = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
+    r2 = tf.subtract(1.0, tf.math.divide(residual, total))
+    return r2
