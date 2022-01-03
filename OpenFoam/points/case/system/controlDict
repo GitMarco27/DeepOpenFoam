@@ -1,0 +1,163 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     simpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         5000;
+
+deltaT          1;
+
+writeControl    timeStep;
+
+writeInterval   1000;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+functions
+{
+    forceCoeffs1
+    {
+        type            forceCoeffs;
+        libs            ("libforces.so");
+        writeControl    timeStep;
+        writeInterval   1000;
+        log             true;
+        patches         ("s_side" "p_side");
+        rho             rhoInf;      // Indicates incompressible.
+        rhoInf          1.18;        // Redundant for incompressible (value does not matter).
+        liftDir         (-0.03489949670250097 0.9993908270190958 0);
+        dragDir         (0.9993908270190958 0.03489949670250097 0);
+        CofR            (0.25 0 0);  // Quarter-chord.
+        pitchAxis       (0 0 1);
+        magUInf         45.0 // Matches 0/U.
+        lRef            1.0;         // Normalized chord.
+        Aref            10.0;         // Cell depth (10) * chord (1).
+    }
+    wallPressure
+    {
+        type                    surfaces;
+        libs                    ("libsampling.so");
+        surfaceFormat           raw;
+        writeControl            timeStep;
+        writeInterval           1000;
+        interpolationScheme     cell;
+        fields                  (p);
+        log                     true;
+        surfaces                (
+
+        p_side
+        {
+        type patch;
+        patches ("p_side");
+        interpolate true;
+        triangulate false;
+        }
+
+        s_side
+        {
+        type patch;
+        patches ("s_side");
+        interpolate true;
+        triangulate false;
+        }
+
+        );
+    }
+    yPlus1
+{
+    // Mandatory entries (unmodifiable)
+    type            yPlus;
+    libs            (fieldFunctionObjects);
+
+    // Optional (inherited) entries
+    writePrecision  8;
+    writeToFile     true;
+    useUserTime     true;
+    region          region0;
+    enabled         true;
+    log             true;
+    timeStart       0;
+    executeControl  timeStep;
+    executeInterval 1;
+    writeControl    timeStep;
+    writeInterval   1000;
+}
+forces1
+{
+    // Mandatory entries
+    type            forces;
+    libs            ("libforces.so");
+    patches         (s_side, p_side);
+
+    writeControl    timeStep;
+    writeInterval   1000;
+
+
+    // Optional entries
+
+    // Field names
+    // p               p;
+    // U               U;
+    rho             rhoInf;
+    rhoInf          1.18;
+
+    // Reference pressure [Pa]
+    pRef            0;
+
+    // Include porosity effects?
+    porosity        no;
+
+    // Store and write volume field representations of forces and moments
+    writeFields     yes;
+
+    // Centre of rotation for moment calculations
+    CofR            (0.25 0 0);
+
+    // Spatial data binning
+    // - extents given by the bounds of the input geometry
+    binData
+    {
+        nBin        20;
+        direction   (1 0 0);
+        cumulative  yes;
+    }
+}
+}
+
+
+
+
+
+// ************************************************************************* //

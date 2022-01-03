@@ -1,14 +1,14 @@
 import tensorflow as tf
 import logging
-from Tensorflow.utils.utils import RunBuilder, load_data
+from .utils.utils import RunBuilder, load_data
 import argparse
 import json
 import os
 from utils.custom_objects import chamfer_distance
 import tqdm
 import pandas as pd
-from sklearn.model_selection import KFold, train_test_split
-from collections import OrderedDict, namedtuple
+from sklearn.model_selection import train_test_split
+from collections import OrderedDict
 from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
 from utils.custom_objects import r_squared
 

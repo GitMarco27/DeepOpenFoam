@@ -80,16 +80,14 @@ def closest_node(node, nodes):
 
 def fit_bezier(o: int,
                data: np.ndarray,
-               start=None,
-               end=None):
 
+               ):
     from scipy.special import comb as n_over_k
     Mtk = lambda n, t, k: t ** k * (1 - t) ** (n - k) * n_over_k(n, k)
     bezier_coefficients = lambda ts, order: [[Mtk(order - 1, t, k) for k in range(order)] for t in ts]
 
-    point, index = data[np.argmin(data[:, 0])], np.argmin(data[:, 0])
+    point = data[np.argmin(data[:, 0])]
     new_data = []
-    new_data.append(np.asarray(start)) if start is not None else None
     new_data.append(point)
     tmp_data = data[data[:, 0] > point[0]]
 
@@ -102,7 +100,6 @@ def fit_bezier(o: int,
         new_data.append(point)
         tmp_data = tmp_data[tmp_data[:, 0] > point[0]]
 
-    new_data.append(np.asarray(end)) if end is not None else None
     new_data = np.asarray(new_data)
     tData = np.linspace(0., 1., new_data.shape[0])
 
@@ -130,7 +127,7 @@ def plot_airfoil(airfoil, cl=0, cd=0):
     lower = airfoil[np.round(airfoil[:, -1], 0) == 1][:, :2]
 
     upper_, upper_control_points = fit_bezier(12, upper)
-    lower_, lower_control_points = fit_bezier(12, lower, [upper_[0][0], upper_[0][1]], [upper_[-1][0], upper_[-1][1]])
+    lower_, lower_control_points = fit_bezier(12, lower)
 
     axs[0].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
     axs[0].scatter(lower[:, 0], lower[:, 1], s=10, edgecolor='k', label='lower')
@@ -156,3 +153,5 @@ def plot_airfoil(airfoil, cl=0, cd=0):
     axs[1].legend()
 
     plt.show()
+
+    return upper_, lower_
