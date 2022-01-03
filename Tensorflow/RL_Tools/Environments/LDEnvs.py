@@ -79,27 +79,33 @@ class LDEnv(gym.Env):
 
         # Calculates parameters for normalization as maximum and minimum value for each of latents and then adds them
         # into data_env dict
-        min_values_latent, max_values_latent = self.calc_min_max_of_state(self._number_of_global_variables)
-
-        self.data_env['min_values_latent'] = min_values_latent
-        self.data_env['max_values_latent'] = max_values_latent
-
-        # I reset the status that will have a size equal to the number of latent
-        # parameters plus the value of the global quantity
-        self._state = [0] * (self._number_of_latent_parameters + self._number_of_global_variables)
+        min_values_latent, max_values_latent, min_gv, max_gv = self.calc_min_max_of_state(self._number_of_global_variables)
+        margin_latent_extremes = 1
+        self.data_env['min_values_latent'] = min_values_latent -margin_latent_extremes
+        self.data_env['max_values_latent'] = max_values_latent + margin_latent_extremes
+        self.data_env['min_gv'] = min_gv
+        self.data_env['max_gv'] = max_gv
 
         # Observation space
-        min_value_observation = np.array(self.data_env['min_values_latent'].tolist()+[-5]*self._number_of_global_variables)
-        max_value_observation = np.array(self.data_env['max_values_latent'].tolist()+[5]*self._number_of_global_variables)
+        min_value_observation = np.array(self.data_env['min_values_latent'].tolist()+self.data_env['min_gv'].tolist())
+        max_value_observation = np.array(self.data_env['max_values_latent'].tolist()+self.data_env['max_gv'].tolist())
 
         self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float64)
+
+        self._state = self.observation_space.sample()
 
     # Function used to calculate the maximum and minimum for each of the latent params
     def calc_min_max_of_state(self, number_of_global_variables):
         pd_all_cod = pd.DataFrame(self.data_env['cod'])
         min_latent = pd_all_cod.min().to_numpy()
         max_latent = pd_all_cod.max().to_numpy()
-        return min_latent.reshape(-1) , max_latent.reshape(-1)
+
+        pd_all_gv = pd.DataFrame(self.data_env['origin_global_variables'])
+        min_gv = pd_all_gv.min().to_numpy()
+        min_gv[1] = 0.00001
+        max_gv = pd_all_gv.max().to_numpy()
+
+        return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1) , max_gv.reshape(-1),
 
     def _get_obs(self):
         return np.array(self._state)
@@ -111,8 +117,6 @@ class LDEnv(gym.Env):
         return self._get_obs()[self._number_of_latent_parameters:]
 
     def calculate_global_variabls(self, current_laten_params):
-        self._current_geom = decode(self.models['decoder'], current_laten_params)
-
         global_variables = pred_global_variables(current_laten_params, self.models)
 
         return global_variables
@@ -139,10 +143,8 @@ class LDEnv(gym.Env):
 
         self.num_step = 0
 
-        Cl = self._state[-2]
-        Cd = self._state[-1]
-
-        self.ref_value = Cl / Cd
+        Cl = global_variables[0]
+        Cd = global_variables[1]
 
         return self._get_obs()
 
@@ -189,6 +191,9 @@ class LDEnv(gym.Env):
                                                               'current_value': current_value}
 
     def render(self):
+        current_laten_params = self.get_latent_data_from_state()
+        self._current_geom = decode(self.models['decoder'], current_laten_params)
+
         clear_output(wait=True)
 
         starting_value = round(self.ref_value, 4)

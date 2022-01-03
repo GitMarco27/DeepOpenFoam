@@ -2,8 +2,8 @@ AE:
   model_path: backup/results/13/checkpoint
 
 number_of_global_variables: 2
-steps_per_episode: 20
-delta_value: 20
+steps_per_episode: 40
+delta_value: 1
 
 # Type action space
 # 1. BoxSpaceAction

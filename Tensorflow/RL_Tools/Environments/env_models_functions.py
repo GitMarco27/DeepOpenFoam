@@ -14,6 +14,8 @@ def pred_global_variables(latent_param, models):
 
     # Calcolo delle variabili globali
     latent_param = np.expand_dims(latent_param, axis=0).reshape(1, -1)
-    global_variables = model_reg.predict(latent_param)
+    global_variables = model_reg.predict(latent_param).reshape(-1).tolist()
 
-    return global_variables.reshape(-1).tolist()
+    if global_variables[1] == 0.:
+        global_variables[1] = 0.00001
+    return global_variables
