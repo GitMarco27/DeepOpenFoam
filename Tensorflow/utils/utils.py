@@ -7,7 +7,7 @@ from itertools import product
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from collections import OrderedDict, namedtuple
-
+import yaml
 
 def scale_y_points(x):
     x_norm = x.copy()
@@ -155,3 +155,9 @@ def plot_airfoil(airfoil, cl=0, cd=0):
     plt.show()
 
     return upper_, lower_
+
+
+def read_config(path: str = os.path.join("configuration_files","config.yaml")) -> dict:
+    yaml_file = open(path)
+    my_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+    return my_config
