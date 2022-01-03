@@ -43,6 +43,8 @@ class LDEnv(gym.Env):
     # I also save the current geometry that I use later in the render
     _current_geom = 1
 
+    _starting_geom = 1
+
     # save the old action
     _old_action = None
 
@@ -146,6 +148,12 @@ class LDEnv(gym.Env):
         Cl = global_variables[0]
         Cd = global_variables[1]
 
+        self.ref_value = Cl/Cd
+
+        self._starting_geom = np.expand_dims(self.data_env['origin_geom'][self.current_index], axis=0)
+        self._starting_geom = self.models['denorm_geom'](self._starting_geom, self.models['scaler_geom']['min_y'],
+                                                         self.models['scaler_geom']['max_y'])
+
         return self._get_obs()
 
     def update_latent(self, current_laten_params, action):
@@ -191,20 +199,24 @@ class LDEnv(gym.Env):
                                                               'current_value': current_value}
 
     def render(self):
+        # Starting Geom
+        starting_geom = self._starting_geom
+
+        # Current Geom
         current_laten_params = self.get_latent_data_from_state()
-        self._current_geom = decode(self.models['decoder'], current_laten_params)
+        self._current_geom = decode(self.models, current_laten_params)
 
         clear_output(wait=True)
 
-        starting_value = round(self.ref_value, 4)
+        starting_value =self.ref_value
 
         Cl = self._state[-2]
         Cd = self._state[-1]
 
         current_value = Cl / Cd
 
-        current_value = round(current_value, 4)
-        delta = 100 * round(current_value - starting_value, 4)
+        current_value =current_value
+        delta = round(current_value - starting_value, 4)
 
         if delta < 0:
             color_points = 'red'
@@ -217,28 +229,29 @@ class LDEnv(gym.Env):
         colors[self._old_action < 0] = 'red'
         colors[self._old_action == 0] = 'blue'
 
-        fig, ax = plt.subplots(2, 2, figsize=(20, 10), gridspec_kw={'height_ratios': [3, 1]})
-        fig.suptitle(
-            f'Env: step {self.current_step}, current_value {current_value}, starting eff : {starting_value}, '
-            f'Delta eff: {delta}', fontsize=16)
+        plt.figure(figsize=(15, 15))
+        plt.subplot(2, 1, 1)
+        plt.title(
+            f'Env: step {self.num_step}, current_value {round(current_value, 4)}, starting eff : {round(starting_value, 4)}, '
+            f'Cl: {round(Cl, 4)}, Cd {round(Cd, 4)}, Delta eff: {delta}', fontsize=16)
+        plt.plot(starting_geom[0][:, 0], starting_geom[0][:, 1], c='blue')
+        plt.fill(starting_geom[0][:, 0], starting_geom[0][:, 1], color='blue', alpha=0.2)
 
-        ax[0, 0].scatter(self.data_env['origin_geom'][self.current_index][:, 0],
-                         self.data_env['origin_geom'][self.current_index][:, 1], c=color_points, marker='o')
-        ax[0, 0].set_title('Starting Geom')
-        ax[0, 1].scatter(self._current_geom[0][:, 0], self._current_geom[0][:, 1], c='blue', marker='o')
-        ax[0, 1].set_title('Current Geom')
+        plt.scatter(self._current_geom[0][:, 0], self._current_geom[0][:, 1], c=color_points, marker='o')
+        plt.ylim([-0.4, 0.4])
+        plt.xlim([-0.01, 1.01])
 
-
-
-        ax[1, 0].scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),
+        plt.subplot(2, 2, 3)
+        plt.scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),
                          self._state[:self._number_of_latent_parameters], c=colors)
-        ax[1, 0].set_title('Current latent parameters')
-        # ax[1,0].title('latent_params')
+        plt.title('Current latent parameters')
 
-        ax[1, 1].scatter(np.arange(len(self._old_action)), self._old_action, c=colors)
-        ax[1, 1].set_ylim([-self.delta_value, self.delta_value])
-        ax[1, 1].set_title('Old action')
+        plt.subplot(2, 2, 4)
+        plt.scatter(np.arange(len(self._old_action)), self._old_action, c=colors)
+        plt.title('Action')
         plt.show()
+
+
 
 
 class DiscreteActionLDEnv(LDEnv):

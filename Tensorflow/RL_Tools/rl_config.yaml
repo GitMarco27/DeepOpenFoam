@@ -8,7 +8,7 @@ delta_value: 1
 # Type action space
 # 1. BoxSpaceAction
 # 2. DiscreteAction
-action_space: DiscreteAction
+action_space: BoxSpaceAction
 
 # type agent :
 # 1.
