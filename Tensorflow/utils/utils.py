@@ -7,7 +7,7 @@ from itertools import product
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from collections import OrderedDict, namedtuple
-
+import yaml
 
 def scale_y_points(x):
     x_norm = x.copy()
@@ -39,7 +39,6 @@ def load_data(path: str = 'dataset'):
     normed_geometries_, min_value_y, max_value_y = scale_y_points(data)
 
     return normed_geometries_, normed_global_variables_, scaler_globals_, min_value_y, max_value_y
-
 
 class RunBuilder:
     @staticmethod
@@ -156,3 +155,8 @@ def plot_airfoil(airfoil, cl=0, cd=0):
     axs[1].legend()
 
     plt.show()
+
+def read_config(path: str = os.path.join("configuration_files","config.yaml")) -> dict:
+    yaml_file = open(path)
+    my_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+    return my_config
