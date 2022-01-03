@@ -1,5 +1,16 @@
 import tensorflow as tf
 import logging
+from Tensorflow.utils.utils import RunBuilder, load_data
+import argparse
+import json
+import os
+from utils.custom_objects import chamfer_distance
+import tqdm
+import pandas as pd
+from sklearn.model_selection import KFold, train_test_split
+from collections import OrderedDict, namedtuple
+from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
+from utils.custom_objects import r_squared
 
 logging.basicConfig(level=logging.INFO)
 logging.info(tf.__version__)
@@ -12,83 +23,6 @@ try:
         [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10000)])
 except Exception as e:
     logging.info(e)
-
-import argparse
-import json
-import os
-from utils.custom_objects import chamfer_distance
-from itertools import product
-import tqdm
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import KFold, train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from collections import OrderedDict, namedtuple
-import tensorflow as tf
-from utils.concatenate_sides import concatenate_sides
-from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
-from utils.custom_objects import r_squared
-
-def scale_y_points(x):
-    x_norm = x.copy()
-    x_y = x_norm[:, :, 1].reshape(-1, 1)
-    min_v_y = min(x_y) + 0.2 * min(x_y)  # @TODO: beky => check this
-    max_v_y = max(x_y) + 0.2 * max(x_y)
-
-    x_scaled_y = (x_y - min_v_y / (max_v_y - min_v_y))
-
-    x_norm[:, :, 1] = x_scaled_y.reshape(x[:, :, 1].shape)
-    return x_norm, min_v_y, max_v_y
-
-
-def load_data(path: str = 'dataset'):
-    pressure_side = np.load(f'{path}/pressure_side.npy')
-    suction_side = np.load(f'{path}/suction_side.npy')
-    data = concatenate_sides(suction_side, pressure_side)
-    # escludo il campo di pressione dai dati
-    data[:, :, [3, 4]] = data[:, :, [4, 3]]
-    data = data[:, :, :4]
-    print('Data shape: ', data.shape)
-
-    global_variables_ = pd.read_csv(f'{path}/coefficients_clean.csv')
-    global_variables_ = global_variables_.iloc[:, -2:].to_numpy()
-    scaler_globals_ = MinMaxScaler()
-
-    normed_global_variables_ = scaler_globals_.fit_transform(global_variables_)
-
-    normed_geometries_, min_value_y, max_value_y = scale_y_points(data)
-
-    return normed_geometries_, normed_global_variables_, scaler_globals_, min_value_y, max_value_y
-
-
-class RunBuilder:
-    @staticmethod
-    def get_runs(params):
-        Run = namedtuple('Run', params.keys())
-
-        runs = []
-        for v in product(*params.values()):
-            runs.append(Run(*v))
-
-        return runs
-
-
-def handle_results_path():
-    if args.clear:
-        if os.path.exists(args.results_path):
-            os.system(f'rm -r {args.results_path}')
-            os.system(f'rm -r {args.log_path}')
-            os.mkdir(args.results_path)
-            os.mkdir(args.log_path)
-        else:
-            os.mkdir(args.results_path)
-            os.mkdir(args.log_path)
-    else:
-        if os.path.exists(args.results_path):
-            raise ValueError(f'{args.results_path} already exists')
-        else:
-            os.mkdir(args.results_path)
-            os.mkdir(args.log_path)
 
 
 if __name__ == '__main__':
@@ -203,7 +137,6 @@ if __name__ == '__main__':
                             )
 
         model.save(os.path.join(run_path, 'model'))
-        # Ciao
 
         model = tf.keras.models.load_model(os.path.join(run_path, 'checkpoint'),
                                            custom_objects={'r_squared': r_squared,
