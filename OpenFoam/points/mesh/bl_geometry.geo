@@ -21,12 +21,9 @@ m = 2*n - 2; // total number of points on airfoil without repetition
 nle = n; // point number of LE = no. of points on upper surface
          // Point(1) is trailing edge
 
-Include "upper.geo";
-BSpline(1000) = {1:43};
-Include "lower.geo";
-BSpline(2000) = {45:180};
-
-Point(10000) = {0, 0, 0, lc2};
+Include "profile.geo";
+// Bezier(1) = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+// Bezier(2) = {12, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 1};
 
 Transfinite Line{1,2} = n Using Bump 0.2;
 
@@ -34,13 +31,14 @@ Point(1001) = { 0.0, Li, 0.0,lc1};
 Point(1002) = { 0.0, -Li, 0.0, lc1};
 Point(1003) = {Lo, -Li, 0.0, lc1};
 Point(1004) = {Lo, Li, 0.0, lc1};
+Point(1005) = {0, 0, 0};
 
 Line(3) = {1004, 1001};
-Circle(4) = {1001, 10000, 1002};
+Circle(4) = {1001, 1005, 1002};
 Line(5) = {1002, 1003};
 Line(6) = {1003, 1004};
 
-Line Loop(1) = {1000,2000};
+Line Loop(1) = {1,2};
 Line Loop(2) = {3,4,5,6};
 
 //Intermediate Domain
@@ -70,7 +68,7 @@ Call RotatePoint;
 
 
 Line(13) = {2004, 2001};
-Circle(14) = {2001, 10000, 2002};
+Circle(14) = {2001, 1005, 2002};
 Line(15) = {2002, 2003};
 Line(16) = {2003, 2004};
 
@@ -104,3 +102,4 @@ Physical Surface("s_side") = {233};
 Physical Surface("back") = {276,234};
 Physical Surface("front") = {201,202};
 Physical Volume("volume") = {1, 2};//+
+
