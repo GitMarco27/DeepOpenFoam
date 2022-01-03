@@ -10,4 +10,4 @@ def concatenate_sides(suction_side: np.ndarray, pressure_side: np.ndarray):
                                    axis=2)
 
     # the two sides are concatenated
-    return np.concatenate((suction_side, pressure_side), axis=1)
+    return np.concatenate((suction_side,  np.flip(pressure_side, 1)), axis=1)
