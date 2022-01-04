@@ -54,6 +54,9 @@ class LDEnv(gym.Env):
 
     ref_value = 10000
 
+    # index used for test a specific geometry
+    select_geom_index= None
+
     def __init__(self, models, data_env, rl_config):
         super(LDEnv, self).__init__()
         # Load autoencoders and prediction models.
@@ -130,8 +133,11 @@ class LDEnv(gym.Env):
         """
         self._episode_ended = False
 
-        # I randomly choose a new geometry for this episode
-        self.current_index = random.randint(0, self.data_env['cod'].shape[0] - 1)
+        if self.select_geom_index is not None:
+            self.current_index = self.select_geom_index
+        else:
+            # I randomly choose a new geometry for this episode
+            self.current_index = random.randint(0, self.data_env['cod'].shape[0] - 1)
 
         # Extract current latents
         current_laten_params = self.data_env['cod'][self.current_index]
@@ -198,7 +204,7 @@ class LDEnv(gym.Env):
         return self._get_obs(), reward, self._episode_ended, {'best_value_obtained': self.ref_value,
                                                               'current_value': current_value}
 
-    def render(self):
+    def render(self,  mode="human"):
         # Starting Geom
         starting_geom = self._starting_geom
 
