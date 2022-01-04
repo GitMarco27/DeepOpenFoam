@@ -19,7 +19,7 @@ from stable_baselines3.common.env_checker import check_env
 from datetime import datetime
 from stable_baselines3 import DDPG, TD3, PPO, A2C, DQN, HER, SAC
 from RL_Tools.rl_uitls.plot_curves import plot_results
-
+from RL_Tools.rl_uitls.SaveBestModelCallback import SaveOnBestTrainingRewardCallback
 
 
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +33,21 @@ try:
         [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10000)])
 except Exception as e:
     logging.info(e)
+
+
+possible_box_action_agents={
+    'A2C':A2C,
+    'DDPG': DDPG,
+    'PPO': PPO,
+    'SAC': SAC,
+    'TD3': TD3,
+}
+
+possible_discrete_action_agents={
+    'A2C': A2C,
+    'DQN': DQN,
+    'PPO': PPO,
+}
 
 
 def gen_data_for_envs(rl_config):
@@ -75,33 +90,69 @@ def gen_data_for_envs(rl_config):
 
     return ae_models,data_env_train, data_env_test
 
-if __name__ == '__main__':
-    results_path = 'results/RL_results/agent_'+datetime.now().strftime("%d_%m_%Y %H_%M_%S")
-    CHECK_FOLDER = os.path.isdir(results_path)
-
-    # If folder doesn't exist, then create it.
-    if not CHECK_FOLDER:
-        os.makedirs(results_path)
-        print("created folder : ", results_path)
-
-    rl_config = read_config('RL_Tools/rl_config.yaml')
-    print('rl_config', read_config)
-
-    # save the current rl_config file in results path
-    with open(results_path+'/rl_config.yml', 'w') as yaml_file:
-        yaml.dump(rl_config, yaml_file, default_flow_style=False)
-
-    # Create data for environments
-    ae_models,data_env_train, data_env_test = gen_data_for_envs(rl_config)
-
-    if rl_config['type_agent']=='BoxActionLDEnv':
-        gym_env_train = BoxActionLDEnv(ae_models, data_env_train, rl_config)
-        gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+def wrap_env(gym_env, log_path=None):
+    if log_path is not None:
+        gym_env = Monitor(gym_env, log_path)
     else:
-        gym_env_train = DiscreteActionLDEnv(ae_models, data_env_train, rl_config)
-        gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+        gym_env = Monitor(gym_env)
+    env = DummyVecEnv([lambda: gym_env])
+    env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=10.)
+    env = VecFrameStack(env, n_stack=4)
+    return env
 
-    # Wrapper envs
+if __name__ == '__main__':
+    with tf.device('/CPU:0'):
+        rl_config = read_config('RL_Tools/rl_config.yaml')
+        print('rl_config', read_config)
+
+        all_resuls_path = 'results/RL_results/'
+        if rl_config['Re_Training']['active']:
+            agent_name= rl_config['Re_Training']['model_path']
+        else:
+            agent_name = 'agent_'+datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+
+        results_path = all_resuls_path+agent_name
+        CHECK_FOLDER = os.path.isdir(results_path)
+
+        # If folder doesn't exist, then create it.
+        if not CHECK_FOLDER:
+            os.makedirs(results_path)
+            print("created folder : ", results_path)
+
+        # save the current rl_config file in results path
+        with open(results_path+'/rl_config.yml', 'w') as yaml_file:
+            yaml.dump(rl_config, yaml_file, default_flow_style=False)
+
+        # Create data for environments
+        ae_models,data_env_train, data_env_test = gen_data_for_envs(rl_config)
+
+        if rl_config['action_space']=='BoxSpaceAction':
+            gym_env_train = BoxActionLDEnv(ae_models, data_env_train, rl_config)
+            gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+
+            agent = possible_box_action_agents[rl_config['type_agent']]
+        else:
+            gym_env_train = DiscreteActionLDEnv(ae_models, data_env_train, rl_config)
+            gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+
+            agent = possible_discrete_action_agents[rl_config['type_agent']]
+
+        # Wrapper envs
+        env_train = wrap_env(gym_env_train, log_path= results_path)
+        env_eval = wrap_env(gym_env_eval)
+
+        # create agent
+        model = agent(rl_config['agent_config']['policy_network'], env_train, verbose=0, tensorboard_log='logs/tb_stable_baseline_logs/'+agent_name)
+
+        # Create Callbacks
+        callback = SaveOnBestTrainingRewardCallback(check_freq=100, log_dir=results_path)
+
+        # evaluate model before training
+
+
+        # Train
+        model.learn(total_timesteps=int(rl_config['total_timesteps']), callback=callback, reset_num_timesteps=not rl_config['Re_Training']['active'])
+
 
 
 
