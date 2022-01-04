@@ -181,22 +181,15 @@ def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400,
 
         if dfferent_out_for_globals:
             out_reg_gv = [tf.keras.layers.Dense(1, activation='relu')(x) for _ in range(n_global_variables)]
-
-            reg_gv = tf.keras.Model(inputs=input_decoder, outputs=out_reg_gv, name='reg_gv')
-
-            string_name += '_with_RegModel'
-            o2 = reg_gv(cod)
-
-            model = tf.keras.Model(inputs=inputs, outputs=[o1]+o2, name=string_name)
         else:
             out_reg_gv = tf.keras.layers.Dense(n_global_variables, activation='relu')(x)
 
-            reg_gv = tf.keras.Model(inputs=input_decoder, outputs=out_reg_gv, name='reg_gv')
+        reg_gv = tf.keras.Model(inputs=input_decoder, outputs=out_reg_gv, name='reg_gv')
 
-            string_name += '_with_RegModel'
-            o2 = reg_gv(cod)
+        string_name += '_with_RegModel'
+        o2 = reg_gv(cod)
 
-            model = tf.keras.Model(inputs=inputs, outputs=[o1, o2], name=string_name)
+        model = tf.keras.Model(inputs=inputs, outputs=[o1, o2], name=string_name)
     else:  # solo Autoencoder
         model = tf.keras.Model(inputs=inputs, outputs=o1, name=string_name)
 
