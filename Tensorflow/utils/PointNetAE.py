@@ -77,7 +77,8 @@ def t_network(inputs,
     return tf.keras.layers.Dot(axes=(2, 1))([inputs, feat_t])
 
 
-def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400, n_global_variables: int = 2, ):
+def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400, n_global_variables: int = 2,
+                       dfferent_out_for_globals:bool = False):
     if not isinstance(params, dict):
         params = params._asdict()
 
@@ -177,7 +178,12 @@ def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400,
         x = tf.keras.layers.Dropout(reg_drop_out_value)(x)
         x = tf.keras.layers.Dense(int(encoding_size / 2), activation='relu')(x)
         x = tf.keras.layers.Dropout(reg_drop_out_value)(x)
-        out_reg_gv = tf.keras.layers.Dense(n_global_variables, activation='relu')(x)
+
+        if dfferent_out_for_globals:
+            out_reg_gv = [tf.keras.layers.Dense(1, activation='relu')(x) for _ in range(n_global_variables)]
+        else:
+            out_reg_gv = tf.keras.layers.Dense(n_global_variables, activation='relu')(x)
+
         reg_gv = tf.keras.Model(inputs=input_decoder, outputs=out_reg_gv, name='reg_gv')
 
         string_name += '_with_RegModel'
