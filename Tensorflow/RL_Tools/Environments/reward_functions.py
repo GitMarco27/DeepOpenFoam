@@ -37,7 +37,7 @@ def final_start_value_reward(state, ref_value, episode_ended:bool= False):
     if episode_ended:
         delta_value = current_value - ref_value
 
-        reward = round(100*delta_value, 2)
+        reward = round(delta_value, 2)
     else:
         reward = 0
 

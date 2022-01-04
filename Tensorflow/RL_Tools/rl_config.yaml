@@ -1,9 +1,14 @@
 AE:
-  model_path: backup/results/13/checkpoint
+  model_path: ./results/4065/checkpoint
+
+Re_Training:
+  active: False
+  model_path: None
 
 number_of_global_variables: 2
 steps_per_episode: 40
 delta_value: 1
+total_timesteps: 1000000
 
 # Type action space
 # 1. BoxSpaceAction
@@ -14,7 +19,7 @@ action_space: BoxSpaceAction
 # 1.
 # 2.
 # 3.
-type_agent: None
+type_agent: PPO
 
 #type reward
 # i tipi di reward sono defini attraverso le funzioni che troviamo nel file rewaed_functions
@@ -24,3 +29,10 @@ type_agent: None
 # 4. max_value_reward
 # 5. final_start_value_reward
 type_rewards: final_start_value_reward
+
+agent_config:
+  #type policy network
+  # 1. MlpPolicy:
+  # 2. MlpLstmPolicy
+  # 3. MlpLnLstmPolicy
+  policy_network: MlpPolicy
