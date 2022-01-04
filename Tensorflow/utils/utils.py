@@ -120,27 +120,26 @@ def denorm(x_norm, min_v_y, max_v_y):
     return x
 
 
-def plot_airfoil(airfoil, cl=0, cd=0):
-    fig, axs = plt.subplots(ncols=2, figsize=(16, 8))
+def plot_airfoil(airfoil, cl=0, cd=0, o=12):
+    fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(16, 16))
 
     upper = airfoil[np.round(airfoil[:, -1], 0) == 0][:, :2]
     lower = airfoil[np.round(airfoil[:, -1], 0) == 1][:, :2]
 
-    upper_, upper_control_points = fit_bezier(12, upper)
-    lower_, lower_control_points = fit_bezier(12, lower)
+    upper_, upper_control_points = fit_bezier(o, upper)
+    lower_, lower_control_points = fit_bezier(o, lower)
 
-    axs[0].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
-    axs[0].scatter(lower[:, 0], lower[:, 1], s=10, edgecolor='k', label='lower')
+    axs[0, 0].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
+    axs[0, 0].scatter(lower[:, 0], lower[:, 1], s=10, edgecolor='k', label='lower')
+    axs[0, 0].set_xlim([-0.1, 1.1])
+    axs[0, 0].set_ylim([-0.6, 0.6])
 
-    axs[0].set_xlim([-0.1, 1.1])
-    axs[0].set_ylim([-0.6, 0.6])
+    axs[0, 0].set_title('Cl: %.4f - Cd : %.4f - eta: %.4f' % (cl, cd, cl / cd))
+    axs[0, 0].legend()
 
-    axs[0].set_title('Cl: %.4f - Cd : %.4f - eta: %.4f' % (cl, cd, cl / cd))
-    axs[0].legend()
-
-    axs[1].plot(upper_[:, 0],
+    axs[0, 1].plot(upper_[:, 0],
                 upper_[:, 1], 'b--', label='fit_upper', fillstyle='none')
-    axs[1].plot(lower_[:, 0],
+    axs[0, 1].plot(lower_[:, 0],
                 lower_[:, 1], 'r--', label='fit_lower', fillstyle='none')
 
     # axs[1].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
@@ -148,9 +147,23 @@ def plot_airfoil(airfoil, cl=0, cd=0):
     # axs[1].plot(upper_control_points[:,0],
     #             upper_control_points[:,1], 'ko:', fillstyle='none')
 
-    axs[1].set_xlim([-0.1, 1.1])
-    axs[1].set_ylim([-0.6, 0.6])
-    axs[1].legend()
+    axs[0, 1].set_xlim([-0.1, 1.1])
+    axs[0, 1].set_ylim([-0.6, 0.6])
+    axs[0, 1].legend()
+
+    axs[1, 0].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
+    axs[1, 0].scatter(lower[:, 0], lower[:, 1], s=10, edgecolor='k', label='lower')
+    axs[1, 0].set_xlim([-0.1, 0.1])
+    axs[1, 0].set_ylim([-0.2, 0.2])
+    axs[1, 0].set_title('Cl: %.4f - Cd : %.4f - eta: %.4f' % (cl, cd, cl / cd))
+    axs[1, 0].legend()
+
+    axs[1, 1].scatter(upper[:, 0], upper[:, 1], s=10, edgecolor='k', label='upper')
+    axs[1, 1].scatter(lower[:, 0], lower[:, 1], s=10, edgecolor='k', label='lower')
+    axs[1, 1].set_xlim([0.9, 1.1])
+    axs[1, 1].set_ylim([-0.2, 0.2])
+    axs[1, 1].set_title('Cl: %.4f - Cd : %.4f - eta: %.4f' % (cl, cd, cl / cd))
+    axs[1, 1].legend()
 
     plt.show()
 

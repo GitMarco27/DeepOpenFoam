@@ -22,7 +22,7 @@ changeDictionary -case case
 decomposePar -case case
 
 # Finally, run the simulation:
-mpirun -np 10 simpleFoam -case case -parallel
+mpirun -np 2 simpleFoam -case case -parallel
 
 # Reverse the mesh splitting
 reconstructPar -case case
