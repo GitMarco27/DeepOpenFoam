@@ -165,6 +165,22 @@ class LDEnv(gym.Env):
     def update_latent(self, current_laten_params, action):
         return None
 
+    # def get_reward(self):
+    #     current_laten_params = self.get_latent_data_from_state()
+    #     max_latent = self.data_env['max_values_latent']
+    #     min_latent = self.data_env['min_values_latent']
+    #
+    #     # it is checked if the agent goes out of the permissible range of latent parameters
+    #     is_out_of_range = ((current_laten_params<min_latent) | (current_laten_params> max_latent)).any()
+    #
+    #     if is_out_of_range:
+    #         reward = -1
+    #     else:
+    #         reward = self.get_positive_reward(self._state, self.ref_value, self._episode_ended)
+    #
+    #     return reward
+
+
     def step(self, action):
         self.num_step += 1
 
@@ -250,6 +266,7 @@ class LDEnv(gym.Env):
         plt.subplot(2, 2, 3)
         plt.scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),
                          self._state[:self._number_of_latent_parameters], c=colors)
+        plt.plot(self.data_env['max_values_latent'])
         plt.title('Current latent parameters')
 
         plt.subplot(2, 2, 4)

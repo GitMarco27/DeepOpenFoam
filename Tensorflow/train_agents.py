@@ -20,6 +20,7 @@ from datetime import datetime
 from stable_baselines3 import DDPG, TD3, PPO, A2C, DQN, HER, SAC
 from RL_Tools.rl_uitls.plot_curves import plot_results
 from RL_Tools.rl_uitls.SaveBestModelCallback import SaveOnBestTrainingRewardCallback
+from stable_baselines3.common.callbacks import EvalCallback
 
 
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +50,16 @@ possible_discrete_action_agents={
     'PPO': PPO,
 }
 
+def pred_latent_data(ae_models, train_data, test_data):
+    if len(ae_models['ae'].layers) == 4:
+        train_latent = ae_models['encoder'].predict(train_data)
+        test_latent = ae_models['encoder'].predict(test_data)
+    else:
+        train_latent = ae_models['v_cod'].predict(ae_models['encoder'].predict(train_data))
+        test_latent = ae_models['v_cod'].predict(ae_models['encoder'].predict(test_data))
+    return train_latent, test_latent
+
+
 
 def gen_data_for_envs(rl_config):
     # Load data
@@ -75,8 +86,7 @@ def gen_data_for_envs(rl_config):
     ae_models['denorm_geom'] = denorm
 
     # Generate Latent data for Training and Test
-    train_latent = ae_models['encoder'].predict(train_data)
-    test_latent = ae_models['encoder'].predict(test_data)
+    train_latent, test_latent = pred_latent_data(ae_models, train_data, test_data)
 
     data_env_train = {'cod': train_latent,
                       'origin_geom': train_data,
@@ -146,6 +156,9 @@ if __name__ == '__main__':
 
         # Create Callbacks
         callback = SaveOnBestTrainingRewardCallback(check_freq=100, log_dir=results_path)
+        # eval_callback = EvalCallback(env_eval, best_model_save_path=results_path,
+        #                              log_path=results_path, eval_freq=1000,
+        #                              deterministic=True, render=False)
 
         # evaluate model before training
 

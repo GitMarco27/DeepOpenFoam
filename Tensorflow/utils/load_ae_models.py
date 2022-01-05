@@ -17,8 +17,14 @@ def load_ae_models(rl_config):
 
     # divido l'autoencoder in encoder e decoder
     encoder = ae_model.layers[1]
-    decoder = ae_model.layers[2]
-    reg_model = ae_model.layers[3]
+
+    if len(ae_model.layers) == 4:
+        decoder = ae_model.layers[2]
+        reg_model = ae_model.layers[3]
+    else:
+        decoder = ae_model.layers[3]
+        reg_model = ae_model.layers[4]
+        v_cod = ae_model.layers[2]
 
     models= {
         'ae': ae_model,
@@ -26,5 +32,8 @@ def load_ae_models(rl_config):
         'encoder': encoder,
         'decoder': decoder
     }
+
+    if len(ae_model.layers) > 4:
+        models['v_cod']= v_cod
 
     return models
