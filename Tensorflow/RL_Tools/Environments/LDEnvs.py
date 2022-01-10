@@ -95,7 +95,7 @@ class LDEnv(gym.Env):
         min_value_observation = np.array(self.data_env['min_values_latent'].tolist()+self.data_env['min_gv'].tolist())
         max_value_observation = np.array(self.data_env['max_values_latent'].tolist()+self.data_env['max_gv'].tolist())
 
-        self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float64)
+        self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float32)
 
         self._state = self.observation_space.sample()
 

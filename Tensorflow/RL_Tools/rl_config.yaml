@@ -1,5 +1,5 @@
 AE:
-  model_path: ./results/4065/checkpoint
+  model_path: ./results/2059/checkpoint
 
 Re_Training:
   active: False
