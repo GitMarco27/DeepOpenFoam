@@ -7,39 +7,6 @@ def fit_pol(x, *coeffs):
     y = np.polyval(coeffs, x)
     return y
 
-
-def fit_exp(x, b, *coeffs):
-    coeffs_single_exp = np.array(coeffs).reshape(-1, 2)
-    y = b
-    for i in range(coeffs_single_exp.shape[0]):
-        c1 = coeffs_single_exp[i, 0]
-        c2 = coeffs_single_exp[i, 1]
-        y = c1 * np.exp(-c2 * x)
-    return y
-
-
-def fit_log(x, b, *coeffs):
-    coeffs_single_log = np.array(coeffs).reshape(-1, 2)
-    y = b
-    for i in range(coeffs_single_log.shape[0]):
-        c1 = coeffs_single_log[i, 0]
-        c2 = coeffs_single_log[i, 1]
-        y = c1 * np.log(c2 * x)
-    return y
-
-
-def fit_mix_function(x, *coeffs):
-    coeffs_pol = coeffs[:int(len(coeffs) / 3)]
-    coeffs_exp = coeffs[int(len(coeffs) / 3):int(len(coeffs) * 2 / 3)]
-    coeffs_log = coeffs[int(len(coeffs) * 2 / 3):]
-
-    y_pol = fit_pol(x, *coeffs_pol)
-    y_exp = fit_exp(x, *coeffs_exp)
-    y_log = fit_log(x, *coeffs_log)
-
-    return y_pol + y_exp + y_log
-
-
 def fit_bezier(x, *coeffs):
     o = int(len(coeffs) / 2)
     Mtk = lambda n, t, k: t ** k * (1 - t) ** (n - k) * n_over_k(n, k)
@@ -50,12 +17,9 @@ def fit_bezier(x, *coeffs):
 
 
 def fit_curve(x, y, order: int = 10, function_string: str = 'fit_pol'):
-    if function_string == 'fit_exp':
-        fit = fit_exp
-    elif function_string == 'fit_pol':
+
+    if function_string == 'fit_pol':
         fit = fit_pol
-    elif function_string == 'mix':
-        fit = fit_mix_function
     else:
         fit = fit_bezier
 
