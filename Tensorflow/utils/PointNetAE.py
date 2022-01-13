@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 from abc import ABC
 import tensorflow.keras.backend as K
-
+from .custom_objects import r_squared, chamfer_distance, euclidian_dist_loss
+from .utils import scale_y_points, load_data
 
 class Sampling(tf.keras.layers.Layer):
     def call(self, inputs):
@@ -194,3 +195,23 @@ def create_pointnet_ae(params, grid_size: int = 3, n_geometry_points: int = 400,
         model = tf.keras.Model(inputs=inputs, outputs=o1, name=string_name)
 
     return model
+
+def load_ae_model(model_path):
+    ae = tf.keras.models.load_model(model_path,
+                                    custom_objects={'r_squared': r_squared,
+                                                    'euclidian_dist_loss': euclidian_dist_loss,
+                                                    'chamfer_distance': chamfer_distance,
+                                                    'OrthogonalRegularizer': OrthogonalRegularizer,
+                                                    'Sampling': Sampling})
+
+    if len(ae.layers) == 4:
+        encoder = ae.layers[1]
+        decoder = ae.layers[2]
+        reg_model = ae.layers[3]
+    else:
+        encoder = tf.keras.models.Sequential(ae.layers[1:3])
+        decoder = ae.layers[3]
+        reg_model = ae.layers[4]
+
+    return ae, encoder, decoder, reg_model
+

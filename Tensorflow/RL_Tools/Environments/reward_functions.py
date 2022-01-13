@@ -32,14 +32,34 @@ def final_start_value_reward(state, ref_value, episode_ended:bool= False):
 
     if Cd==0.:
         Cd=.00001
+
+
     current_value = Cl / Cd
 
     if episode_ended:
         delta_value = current_value - ref_value
 
-        reward = round(delta_value, 2)
+        reward = round(delta_value, 4)
     else:
         reward = 0
 
     return reward
 
+
+def final_sumGV_reward(state, ref_value, episode_ended: bool = False):
+    Cl = state[-2]
+    Cd = state[-1]
+
+    if Cd == 0.:
+        Cd = .00001
+
+    current_value = 10*Cl + Cd
+
+    if episode_ended:
+        delta_value = current_value
+
+        reward = round(delta_value, 4)
+    else:
+        reward = 0
+
+    return reward

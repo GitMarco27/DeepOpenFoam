@@ -16,6 +16,14 @@ def fit_bezier(x, *coeffs):
     return bezier[:, 1]
 
 
+def cal_error(x, y, fit, coeffs):
+    x_line = x
+    # calculate the output for the range
+    y_line = fit(x_line, *coeffs)
+
+    fitting_error = np.sqrt((y - y_line) ** 2).mean()
+    return fitting_error
+
 def fit_curve(x, y, order: int = 10, function_string: str = 'fit_pol'):
 
     if function_string == 'fit_pol':
@@ -23,18 +31,21 @@ def fit_curve(x, y, order: int = 10, function_string: str = 'fit_pol'):
     else:
         fit = fit_bezier
 
+    if order > len(x):
+        order = len(x)-1
+
     p0 = np.ones(order)
-    popt, pcov = curve_fit(fit, x, y, p0=p0)
+    popt, pcov = curve_fit(fit, x, y, p0=p0, maxfev = 3000)
 
     # summarize the parameter values
     coeffs = popt
 
-    # x_line = np.arange(min(x), max(x), 1/len(x))
-    x_line = x
-    # calculate the output for the range
-    y_line = fit(x, *coeffs)
+    x_line = np.linspace(start=min(x), stop=max(x), num=len(x))
 
-    fitting_error = np.sqrt((x - x_line) ** 2 + (y - y_line) ** 2).mean()
+    # calculate the output for the range
+    y_line = fit(x_line, *coeffs)
+
+    fitting_error = cal_error(x,y, fit, coeffs)
 
     return x_line, y_line, popt, pcov, fitting_error
 
@@ -80,8 +91,8 @@ def fit_geom(geom, order: int = 10, sub_geom: int = 2, function_string: str = 'f
     return curv, fitting_error
 
 
-def plot_fit_curve(curvs):
+def plot_fit_curve(curvs, color='black'):
     for curv in curvs['lower']['all_curves']:
-        plt.scatter(curv[:, 0], curv[:, 1], color='red')
+        plt.plot(curv[:, 0], curv[:, 1], color=color)
     for curv in curvs['upper']['all_curves']:
-        plt.scatter(curv[:, 0], curv[:, 1], color='red')
+        plt.plot(curv[:, 0], curv[:, 1] , color=color)

@@ -26,6 +26,8 @@ def get_all_rewards_functions():
 
 
 class LDEnv(gym.Env):
+
+
     # starting geometry index
     current_index = 0
 
@@ -59,12 +61,17 @@ class LDEnv(gym.Env):
 
     def __init__(self, models, data_env, rl_config):
         super(LDEnv, self).__init__()
+
+        plt.style.use(rl_config['style_matplotlib'])
+
+
         # Load autoencoders and prediction models.
         self.models = models
 
 
         # I get the environment variables from the configuration file
         self.num_steps_max = rl_config['steps_per_episode']
+        self.fit_params= rl_config['fit_params']
 
         # In date env we find several dait:
         # 1. Latent data
@@ -72,7 +79,7 @@ class LDEnv(gym.Env):
         self.data_env = data_env
 
         possible_reward_functions = get_all_rewards_functions()
-        self.get_reward = possible_reward_functions[rl_config['type_rewards']]
+        self.get_eff_reward = possible_reward_functions[rl_config['type_rewards']]
 
         # get number of latent parameters
         self._number_of_latent_parameters = self.data_env['cod'].shape[1]
@@ -98,6 +105,29 @@ class LDEnv(gym.Env):
         self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float32)
 
         self._state = self.observation_space.sample()
+
+    def fit_current_geom(self, current_geom):
+        geom = current_geom
+        geom = geom[geom[:,0]>self.fit_params['th_x']]
+        fitting_curve, fitting_error = self.models['fit_geom'](geom, order=self.fit_params['order'],
+                                                   sub_geom=self.fit_params['sub_geom'])
+
+        fitting_reward = (1/fitting_error) * float(self.fit_params['alpha'])
+
+        return fitting_curve, fitting_reward
+
+    def get_reward(self, state, ref_value, episode_ended:bool= False):
+        eff_reward =self.get_eff_reward(state, ref_value, episode_ended=episode_ended )
+
+        if episode_ended:
+            current_laten_params = self.get_latent_data_from_state()
+            self._current_geom = decode(self.models, current_laten_params)
+
+            _, fitting_reward = self.fit_current_geom(self._current_geom[0])
+        else:
+            fitting_reward = 0
+
+        return eff_reward + fitting_reward
 
     # Function used to calculate the maximum and minimum for each of the latent params
     def calc_min_max_of_state(self, number_of_global_variables):
@@ -165,22 +195,6 @@ class LDEnv(gym.Env):
     def update_latent(self, current_laten_params, action):
         return None
 
-    # def get_reward(self):
-    #     current_laten_params = self.get_latent_data_from_state()
-    #     max_latent = self.data_env['max_values_latent']
-    #     min_latent = self.data_env['min_values_latent']
-    #
-    #     # it is checked if the agent goes out of the permissible range of latent parameters
-    #     is_out_of_range = ((current_laten_params<min_latent) | (current_laten_params> max_latent)).any()
-    #
-    #     if is_out_of_range:
-    #         reward = -1
-    #     else:
-    #         reward = self.get_positive_reward(self._state, self.ref_value, self._episode_ended)
-    #
-    #     return reward
-
-
     def step(self, action):
         self.num_step += 1
 
@@ -228,6 +242,8 @@ class LDEnv(gym.Env):
         current_laten_params = self.get_latent_data_from_state()
         self._current_geom = decode(self.models, current_laten_params)
 
+        fitting_curve, fitting_reward = self.fit_current_geom(self._current_geom[0])
+
         clear_output(wait=True)
 
         starting_value =self.ref_value
@@ -255,13 +271,14 @@ class LDEnv(gym.Env):
         plt.subplot(2, 1, 1)
         plt.title(
             f'Env: step {self.num_step}, current_value {round(current_value, 4)}, starting eff : {round(starting_value, 4)}, '
-            f'Cl: {round(Cl, 4)}, Cd {round(Cd, 4)}, Delta eff: {delta}', fontsize=16)
+            f'Cl: {round(Cl, 4)}, Cd {round(Cd, 4)}, \nDelta eff: {delta} , Fitting Reward: {fitting_reward}', fontsize=16)
         plt.plot(starting_geom[0][:, 0], starting_geom[0][:, 1], c='blue')
         plt.fill(starting_geom[0][:, 0], starting_geom[0][:, 1], color='blue', alpha=0.2)
 
-        plt.scatter(self._current_geom[0][:, 0], self._current_geom[0][:, 1], c=color_points, marker='o')
-        plt.ylim([-0.4, 0.4])
-        plt.xlim([-0.01, 1.01])
+        self.models['plot_fit_curve'](fitting_curve, color_points)
+        plt.scatter(self._current_geom[0][:, 0], self._current_geom[0][:, 1], c=color_points, s=15, edgecolor='k')
+        plt.ylim([-0.35, 0.35])
+        plt.xlim([-0.02, 1.02])
 
         plt.subplot(2, 2, 3)
         plt.scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),

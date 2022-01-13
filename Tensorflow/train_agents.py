@@ -21,6 +21,7 @@ from stable_baselines3 import DDPG, TD3, PPO, A2C, DQN, HER, SAC
 from RL_Tools.rl_uitls.plot_curves import plot_results
 from RL_Tools.rl_uitls.SaveBestModelCallback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.callbacks import EvalCallback
+from utils.fit_geom import fit_geom, plot_fit_curve
 
 
 logging.basicConfig(level=logging.INFO)
@@ -51,19 +52,15 @@ possible_discrete_action_agents={
 }
 
 def pred_latent_data(ae_models, train_data, test_data):
-    if len(ae_models['ae'].layers) == 4:
-        train_latent = ae_models['encoder'].predict(train_data)
-        test_latent = ae_models['encoder'].predict(test_data)
-    else:
-        train_latent = ae_models['v_cod'].predict(ae_models['encoder'].predict(train_data))
-        test_latent = ae_models['v_cod'].predict(ae_models['encoder'].predict(test_data))
+    train_latent = ae_models['encoder'].predict(train_data)
+    test_latent = ae_models['encoder'].predict(test_data)
     return train_latent, test_latent
 
 
 
 def gen_data_for_envs(rl_config):
     # Load data
-    normed_geometries, normed_global_variables, scaler_globals, min_y, max_y = load_data('dataset')
+    normed_geometries, normed_global_variables, scaler_globals, min_y, max_y = load_data('dataset_complete')
 
     # Split data
     train_data, test_data, train_labels, test_labels = train_test_split(
@@ -84,6 +81,8 @@ def gen_data_for_envs(rl_config):
         'max_y': max_y
     }
     ae_models['denorm_geom'] = denorm
+    ae_models['fit_geom'] = fit_geom
+    ae_models['plot_fit_curve'] = plot_fit_curve
 
     # Generate Latent data for Training and Test
     train_latent, test_latent = pred_latent_data(ae_models, train_data, test_data)
