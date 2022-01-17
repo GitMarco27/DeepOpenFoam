@@ -53,7 +53,7 @@ def final_sumGV_reward(state, ref_value, episode_ended: bool = False):
     if Cd == 0.:
         Cd = .00001
 
-    current_value = 10*Cl + Cd
+    current_value = 10*Cl + 1/Cd
 
     if episode_ended:
         delta_value = current_value

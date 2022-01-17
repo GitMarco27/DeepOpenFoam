@@ -16,6 +16,7 @@ from .env_models_functions import pred_global_variables, decode
 from . import reward_functions
 from inspect import getmembers, isfunction
 
+
 def get_all_rewards_functions():
     list_reward_fucntions_with_keys = getmembers(reward_functions, isfunction)
 
@@ -26,8 +27,6 @@ def get_all_rewards_functions():
 
 
 class LDEnv(gym.Env):
-
-
     # starting geometry index
     current_index = 0
 
@@ -57,21 +56,25 @@ class LDEnv(gym.Env):
     ref_value = 10000
 
     # index used for test a specific geometry
-    select_geom_index= None
+    select_geom_index = None
+
+    # List reward
+    _episode_rewards = {'Cl_reward': [],
+                        'Cd_reward': [],
+                        'Fitting_reward': [],
+                        'Sum_reward': []}
 
     def __init__(self, models, data_env, rl_config):
         super(LDEnv, self).__init__()
 
         plt.style.use(rl_config['style_matplotlib'])
 
-
         # Load autoencoders and prediction models.
         self.models = models
 
-
         # I get the environment variables from the configuration file
         self.num_steps_max = rl_config['steps_per_episode']
-        self.fit_params= rl_config['fit_params']
+        self.fit_params = rl_config['fit_params']
 
         # In date env we find several dait:
         # 1. Latent data
@@ -91,16 +94,17 @@ class LDEnv(gym.Env):
 
         # Calculates parameters for normalization as maximum and minimum value for each of latents and then adds them
         # into data_env dict
-        min_values_latent, max_values_latent, min_gv, max_gv = self.calc_min_max_of_state(self._number_of_global_variables)
+        min_values_latent, max_values_latent, min_gv, max_gv = self.calc_min_max_of_state(
+            self._number_of_global_variables)
         margin_latent_extremes = 1
-        self.data_env['min_values_latent'] = min_values_latent -margin_latent_extremes
+        self.data_env['min_values_latent'] = min_values_latent - margin_latent_extremes
         self.data_env['max_values_latent'] = max_values_latent + margin_latent_extremes
         self.data_env['min_gv'] = min_gv
         self.data_env['max_gv'] = max_gv
 
         # Observation space
-        min_value_observation = np.array(self.data_env['min_values_latent'].tolist()+self.data_env['min_gv'].tolist())
-        max_value_observation = np.array(self.data_env['max_values_latent'].tolist()+self.data_env['max_gv'].tolist())
+        min_value_observation = np.array(self.data_env['min_values_latent'].tolist() + self.data_env['min_gv'].tolist())
+        max_value_observation = np.array(self.data_env['max_values_latent'].tolist() + self.data_env['max_gv'].tolist())
 
         self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float32)
 
@@ -108,16 +112,16 @@ class LDEnv(gym.Env):
 
     def fit_current_geom(self, current_geom):
         geom = current_geom
-        geom = geom[geom[:,0]>self.fit_params['th_x']]
+        geom = geom[geom[:, 0] > self.fit_params['th_x']]
         fitting_curve, fitting_error = self.models['fit_geom'](geom, order=self.fit_params['order'],
-                                                   sub_geom=self.fit_params['sub_geom'])
+                                                               sub_geom=self.fit_params['sub_geom'])
 
-        fitting_reward = (1/fitting_error) * float(self.fit_params['alpha'])
+        fitting_reward = (1 / fitting_error) * float(self.fit_params['alpha'])
 
         return fitting_curve, fitting_reward
 
-    def get_reward(self, state, ref_value, episode_ended:bool= False):
-        eff_reward =self.get_eff_reward(state, ref_value, episode_ended=episode_ended )
+    def get_reward(self, state, ref_value, episode_ended: bool = False):
+        eff_reward = self.get_eff_reward(state, ref_value, episode_ended=episode_ended)
 
         if episode_ended:
             current_laten_params = self.get_latent_data_from_state()
@@ -140,7 +144,7 @@ class LDEnv(gym.Env):
         min_gv[1] = 0.00001
         max_gv = pd_all_gv.max().to_numpy()
 
-        return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1) , max_gv.reshape(-1),
+        return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1), max_gv.reshape(-1),
 
     def _get_obs(self):
         return np.array(self._state)
@@ -163,6 +167,11 @@ class LDEnv(gym.Env):
         """
         self._episode_ended = False
 
+        self._episode_rewards = {'Cl_reward': [],
+                                 'Cd_reward': [],
+                                 'Fitting_reward': [],
+                                 'Sum_reward': []}
+
         if self.select_geom_index is not None:
             self.current_index = self.select_geom_index
         else:
@@ -184,7 +193,7 @@ class LDEnv(gym.Env):
         Cl = global_variables[0]
         Cd = global_variables[1]
 
-        self.ref_value = Cl/Cd
+        self.ref_value = Cl / Cd
 
         self._starting_geom = np.expand_dims(self.data_env['origin_geom'][self.current_index], axis=0)
         self._starting_geom = self.models['denorm_geom'](self._starting_geom, self.models['scaler_geom']['min_y'],
@@ -234,7 +243,7 @@ class LDEnv(gym.Env):
         return self._get_obs(), reward, self._episode_ended, {'best_value_obtained': self.ref_value,
                                                               'current_value': current_value}
 
-    def render(self,  mode="human"):
+    def render(self, mode="human"):
         # Starting Geom
         starting_geom = self._starting_geom
 
@@ -244,16 +253,23 @@ class LDEnv(gym.Env):
 
         fitting_curve, fitting_reward = self.fit_current_geom(self._current_geom[0])
 
+        gv = self.calculate_global_variabls(current_laten_params)
+        # salve current reward
+        self._episode_rewards['Cl_reward'].append(10 * gv[0])
+        self._episode_rewards['Cd_reward'].append(1 / gv[1])
+        self._episode_rewards['Fitting_reward'].append(fitting_reward)
+        self._episode_rewards['Sum_reward'].append(fitting_reward+self._episode_rewards['Cl_reward'][-1]+self._episode_rewards['Cd_reward'][-1])
+
         clear_output(wait=True)
 
-        starting_value =self.ref_value
+        starting_value = self.ref_value
 
         Cl = self._state[-2]
         Cd = self._state[-1]
 
         current_value = Cl / Cd
 
-        current_value =current_value
+        current_value = current_value
         delta = round(current_value - starting_value, 4)
 
         if delta < 0:
@@ -267,11 +283,12 @@ class LDEnv(gym.Env):
         colors[self._old_action < 0] = 'red'
         colors[self._old_action == 0] = 'blue'
 
-        plt.figure(figsize=(15, 15))
-        plt.subplot(2, 1, 1)
+        fig = plt.figure(figsize=(15, 15))
+        fig.add_subplot(311)
         plt.title(
-            f'Env: step {self.num_step}, current_value {round(current_value, 4)}, starting eff : {round(starting_value, 4)}, '
-            f'Cl: {round(Cl, 4)}, Cd {round(Cd, 4)}, \nDelta eff: {delta} , Fitting Reward: {fitting_reward}', fontsize=16)
+            f'Env Step {self.num_step}:     starting_ratio : {round(starting_value, 4)} -----> current_ratio {round(current_value, 4)} = Delta ratio: {delta}\n'
+            f'Cl: {round(Cl, 4)}    Cd {round(Cd, 4)} ',
+            fontsize=16)
         plt.plot(starting_geom[0][:, 0], starting_geom[0][:, 1], c='blue')
         plt.fill(starting_geom[0][:, 0], starting_geom[0][:, 1], color='blue', alpha=0.2)
 
@@ -280,18 +297,26 @@ class LDEnv(gym.Env):
         plt.ylim([-0.35, 0.35])
         plt.xlim([-0.02, 1.02])
 
-        plt.subplot(2, 2, 3)
+        fig.add_subplot(312)
+        plt.plot(self._episode_rewards['Cl_reward'], label='Cl_reward')
+        plt.plot(self._episode_rewards['Cd_reward'], label='Cd_reward')
+        plt.plot(self._episode_rewards['Fitting_reward'], label='Fitting_reward')
+        plt.plot(self._episode_rewards['Sum_reward'], label='Sum_reward', color='C3')
+        plt.legend(loc='upper left', prop={'size': 15})
+        # plt.ylim([-10, 100])
+        plt.title('Rewards')
+
+        fig.add_subplot(325)
         plt.scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),
-                         self._state[:self._number_of_latent_parameters], c=colors)
+                    self._state[:self._number_of_latent_parameters], c=colors)
         plt.plot(self.data_env['max_values_latent'])
         plt.title('Current latent parameters')
 
-        plt.subplot(2, 2, 4)
+        fig.add_subplot(326)
         plt.scatter(np.arange(len(self._old_action)), self._old_action, c=colors)
         plt.title('Action')
+
         plt.show()
-
-
 
 
 class DiscreteActionLDEnv(LDEnv):
@@ -303,7 +328,6 @@ class DiscreteActionLDEnv(LDEnv):
         # 1-> Number of latent parameters: I add to the latent amount
         # Number of latent parameters+1-> End:  subtract from the latent equivalent
         self.action_space = Discrete(2 * rl_config['delta_value'] * self._number_of_latent_parameters + 1)
-
 
     def update_latent(self, current_laten_params, action):
         if action == 0:
@@ -332,7 +356,8 @@ class BoxActionLDEnv(LDEnv):
     def __init__(self, models, data_env, rl_config):
         super(BoxActionLDEnv, self).__init__(models, data_env, rl_config)
 
-        delta_action = (self.delta_value/100)*abs(self.data_env['max_values_latent']-self.data_env['min_values_latent'])
+        delta_action = (self.delta_value / 100) * abs(
+            self.data_env['max_values_latent'] - self.data_env['min_values_latent'])
         # Define action and observation space
         # They must be gym.spaces objects
         # self.action_space = spaces.Box(low=-np.array(1024), high=np.array(1024), dtype=np.int64)
