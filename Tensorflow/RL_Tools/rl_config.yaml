@@ -1,5 +1,7 @@
+style_matplotlib: seaborn
+
 AE:
-  model_path: ./results/2059/checkpoint
+  model_path: ./results/10001/checkpoint
 
 Re_Training:
   active: False
@@ -28,7 +30,8 @@ type_agent: PPO
 # 3. min_value_reward
 # 4. max_value_reward
 # 5. final_start_value_reward
-type_rewards: final_start_value_reward
+# 6. final_sumGV_reward
+type_rewards: final_sumGV_reward
 
 agent_config:
   #type policy network
@@ -36,3 +39,11 @@ agent_config:
   # 2. MlpLstmPolicy
   # 3. MlpLnLstmPolicy
   policy_network: MlpPolicy
+
+
+fit_params:
+  order: 9
+  sub_geom: 1
+  alpha: 0.02162995824037003
+  th_x: 0.01
+

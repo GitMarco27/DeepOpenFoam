@@ -39,3 +39,25 @@ def r_squared(y, y_pred):
     total = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
     r2 = tf.subtract(1.0, tf.math.divide(residual, total))
     return r2
+
+def euclidian_dist_loss(
+        true,
+        pred,
+        a1: float = .5,
+        a2: float = 1.,
+        correction: bool = True):
+
+    square_error = tf.math.square(true - pred)  # [batch, n_point, 3]
+    e_distance = tf.math.sqrt(tf.math.reduce_sum(square_error, axis=-1))  # [batch, n_point]
+    all_ed = tf.math.reduce_mean(e_distance)
+
+    if not correction:
+        return all_ed
+
+    e_distance_se_row, _ = tf.math.top_k(e_distance, k=int(0.1 * pred.shape[1]))
+
+    custom_ed = tf.math.reduce_mean(e_distance_se_row)
+
+    loss = (a1 * all_ed + a2 * custom_ed) * 1 / 2
+
+    return loss
