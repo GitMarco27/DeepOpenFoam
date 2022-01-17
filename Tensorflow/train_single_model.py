@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from collections import OrderedDict
 from utils.PointNetAE import create_pointnet_ae, OrthogonalRegularizer, Sampling
 from utils.custom_objects import r_squared
+from GitMarco.tf.losses import euclidian_dist_loss
 
 logging.basicConfig(level=logging.INFO)
 logging.info(tf.__version__)
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     params = OrderedDict(
         lr=[args.lr],
         batch_size=[args.batch_size],
-        epochs=[10000, ],
+        epochs=[20000, ],
         optimizer=['Adam'],
         type_decoder=[args.decoder],
         architectural_parameters=[[args.arch_bool, args.beta]],
@@ -88,7 +89,8 @@ if __name__ == '__main__':
         ort_reg_bools=[
             [args.orto_reg, args.orto_reg],
         ],  # [feature_transform, orto_reg]
-        reg_drop_out_value=[0., ]
+        reg_drop_out_value=[0., ],
+        loss_function=[tf.keras.metrics.mean_squared_error]
     )
 
     # handle_results_path()
@@ -114,7 +116,7 @@ if __name__ == '__main__':
 
         log_dir = os.path.join(args.log_path, f'{args.k}_{run_count}')
         os.mkdir(log_dir)
-        earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=400)
+        earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2000)
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         checkpoints_callback = tf.keras.callbacks.ModelCheckpoint(
             run_path + '/checkpoint', monitor='val_loss', verbose=2, save_best_only=True,
@@ -134,28 +136,30 @@ if __name__ == '__main__':
 
         model.compile(
             optimizer=optimizer,
-            loss=[chamfer_distance, tf.keras.metrics.mean_squared_error],
+            loss=[run.loss_function, tf.keras.metrics.mean_squared_error],
             metrics=dict(reg_gv=[r_squared]),
         )
 
-        history = model.fit(train_data,
-                            [train_data, train_labels],
-                            batch_size=run.batch_size,
-                            epochs=run.epochs,
-                            shuffle=True,
-                            validation_data=(val_data,
-                                             [val_data, val_labels]),
-                            validation_batch_size=run.batch_size,
-                            callbacks=[tensorboard_callback,
-                                       checkpoints_callback,
-                                       earlystop_callback]
-                            )
+        with tf.device('gpu:0'):
+            history = model.fit(train_data,
+                                [train_data, train_labels],
+                                batch_size=run.batch_size,
+                                epochs=run.epochs,
+                                shuffle=True,
+                                validation_data=(val_data,
+                                                 [val_data, val_labels]),
+                                validation_batch_size=run.batch_size,
+                                callbacks=[tensorboard_callback,
+                                           checkpoints_callback,
+                                           earlystop_callback]
+                                )
 
         model.save(os.path.join(run_path, 'model'))
 
         model = tf.keras.models.load_model(os.path.join(run_path, 'checkpoint'),
                                            custom_objects={'r_squared': r_squared,
                                                            'chamfer_distance': chamfer_distance,
+                                                           'euclidian_dist_loss': euclidian_dist_loss,
                                                            'OrthogonalRegularizer': OrthogonalRegularizer,
                                                            'Sampling': Sampling})
 
@@ -175,10 +179,10 @@ if __name__ == '__main__':
         run_data.append(results)
         df = pd.DataFrame.from_dict(run_data, orient='columns')
 
-        df.to_excel(os.path.join(args.results_path, f'results_{args.k}.xlsx'))
+        df.to_excel(os.path.join(args.results_path, f'results_{args.start_index}.xlsx'))
 
-        with open(os.path.join(run_path, 'log.json'), 'w', encoding='utf-8') as f:
-            json.dump([results], f, ensure_ascii=False, indent=4)
+        # with open(os.path.join(run_path, 'log.json'), 'w', encoding='utf-8') as f:
+        #     json.dump([results], f, ensure_ascii=False, indent=4)
 
     print('\n--- Final Df ---\n')
     print(df)
