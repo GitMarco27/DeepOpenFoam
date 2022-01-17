@@ -90,7 +90,7 @@ if __name__ == '__main__':
             [args.orto_reg, args.orto_reg],
         ],  # [feature_transform, orto_reg]
         reg_drop_out_value=[0., ],
-        loss_function=[tf.keras.metrics.mean_squared_error]
+        loss_function=[chamfer_distance]
     )
 
     # handle_results_path()
