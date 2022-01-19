@@ -56,8 +56,6 @@ def pred_latent_data(ae_models, train_data, test_data):
     test_latent = ae_models['encoder'].predict(test_data)
     return train_latent, test_latent
 
-
-
 def gen_data_for_envs(rl_config):
     # Load data
     normed_geometries, normed_global_variables, scaler_globals, min_y, max_y = load_data('dataset_complete')
