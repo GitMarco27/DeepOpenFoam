@@ -49,4 +49,6 @@ fit_params:
   sub_geom: 1
   alpha: 0.010814979120185
   th_x: 0.01
+  th_x_max: 0.95
+  y_distance_th: 0.01
 
