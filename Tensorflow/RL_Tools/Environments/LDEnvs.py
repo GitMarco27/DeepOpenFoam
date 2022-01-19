@@ -68,10 +68,8 @@ class LDEnv(gym.Env):
         # Load autoencoders and prediction models.
         self.models = models
 
-
         # I get the environment variables from the configuration file
         self.num_steps_max = rl_config['steps_per_episode']
-        self.fit_params= rl_config['fit_params']
 
         # In date env we find several dait:
         # 1. Latent data
@@ -84,15 +82,13 @@ class LDEnv(gym.Env):
         # get number of latent parameters
         self._number_of_latent_parameters = self.data_env['cod'].shape[1]
 
-        self._number_of_global_variables = rl_config['number_of_global_variables']
-
         # get the max value of action
         self.delta_value = rl_config['delta_value']
 
         # Calculates parameters for normalization as maximum and minimum value for each of latents and then adds them
         # into data_env dict
-        min_values_latent, max_values_latent, min_gv, max_gv = self.calc_min_max_of_state(self._number_of_global_variables)
-        margin_latent_extremes = 1
+        min_values_latent, max_values_latent, min_gv, max_gv = self.calc_min_max_of_state()
+        margin_latent_extremes = rl_config['margin_latent_extremes']
         self.data_env['min_values_latent'] = min_values_latent -margin_latent_extremes
         self.data_env['max_values_latent'] = max_values_latent + margin_latent_extremes
         self.data_env['min_gv'] = min_gv
@@ -106,38 +102,19 @@ class LDEnv(gym.Env):
 
         self._state = self.observation_space.sample()
 
-    def fit_current_geom(self, current_geom):
-        geom = current_geom
-        geom = geom[geom[:,0]>self.fit_params['th_x']]
-        fitting_curve, fitting_error = self.models['fit_geom'](geom, order=self.fit_params['order'],
-                                                   sub_geom=self.fit_params['sub_geom'])
-
-        fitting_reward = (1/fitting_error) * float(self.fit_params['alpha'])
-
-        return fitting_curve, fitting_reward
 
     def get_reward(self, state, ref_value, episode_ended:bool= False):
         eff_reward =self.get_eff_reward(state, ref_value, episode_ended=episode_ended )
-
-        if episode_ended:
-            current_laten_params = self.get_latent_data_from_state()
-            self._current_geom = decode(self.models, current_laten_params)
-
-            _, fitting_reward = self.fit_current_geom(self._current_geom[0])
-        else:
-            fitting_reward = 0
-
-        return eff_reward + fitting_reward
+        return eff_reward
 
     # Function used to calculate the maximum and minimum for each of the latent params
-    def calc_min_max_of_state(self, number_of_global_variables):
+    def calc_min_max_of_state(self):
         pd_all_cod = pd.DataFrame(self.data_env['cod'])
         min_latent = pd_all_cod.min().to_numpy()
         max_latent = pd_all_cod.max().to_numpy()
 
         pd_all_gv = pd.DataFrame(self.data_env['origin_global_variables'])
         min_gv = pd_all_gv.min().to_numpy()
-        min_gv[1] = 0.00001
         max_gv = pd_all_gv.max().to_numpy()
 
         return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1) , max_gv.reshape(-1),
@@ -151,9 +128,11 @@ class LDEnv(gym.Env):
     def get_global_variable_from_state(self):
         return self._get_obs()[self._number_of_latent_parameters:]
 
+    def get_ref_value(self):
+        return self._state[-1]
+
     def calculate_global_variabls(self, current_laten_params):
         global_variables = pred_global_variables(current_laten_params, self.models)
-
         return global_variables
 
     def reset(self):
@@ -181,15 +160,6 @@ class LDEnv(gym.Env):
 
         self.num_step = 0
 
-        Cl = global_variables[0]
-        Cd = global_variables[1]
-
-        self.ref_value = Cl/Cd
-
-        self._starting_geom = np.expand_dims(self.data_env['origin_geom'][self.current_index], axis=0)
-        self._starting_geom = self.models['denorm_geom'](self._starting_geom, self.models['scaler_geom']['min_y'],
-                                                         self.models['scaler_geom']['max_y'])
-
         return self._get_obs()
 
     def update_latent(self, current_laten_params, action):
@@ -214,10 +184,6 @@ class LDEnv(gym.Env):
         for variable in global_variables:
             self._state.append(variable)
 
-        # update best_value obtained
-        # if self._state[-1] > self.best_value_obtained:
-        #     self.best_value_obtained = self._state[-1]
-
         # Check if the episode is finished
         if self.num_step >= self.num_steps_max:
             self._episode_ended = True
@@ -226,13 +192,118 @@ class LDEnv(gym.Env):
         reward = self.get_reward(self._state, self.ref_value, self._episode_ended)
 
         # current value
+        current_value = self.get_ref_value()
+
+        return self._get_obs(), reward, self._episode_ended, {'best_value_obtained': self.ref_value,
+                                                              'current_value': current_value}
+
+    def render(self,  mode="human"):
+        pass
+
+
+
+
+class DiscreteActionLDEnv(LDEnv):
+    def __init__(self, models, data_env, rl_config):
+        super(DiscreteActionLDEnv, self).__init__(models, data_env, rl_config)
+
+        # the actions are divided in this way
+        # 0 I do nothing
+        # 1-> Number of latent parameters: I add to the latent amount
+        # Number of latent parameters+1-> End:  subtract from the latent equivalent
+        self.action_space = Discrete(2 * rl_config['delta_value'] * self._number_of_latent_parameters + 1)
+
+
+    def update_latent(self, current_laten_params, action):
+        if action == 0:
+            return current_laten_params
+
+        value_to_sum = math.floor(action / 2048) + 1
+
+        if action > 2 * self._number_of_latent_parameters + 1:
+            action = action - ((2 * self._number_of_latent_parameters) * (value_to_sum - 1))
+
+        self._old_action = np.zeros(current_laten_params.shape)
+
+        if action > self._number_of_latent_parameters:
+            self._old_action[int(action - 1024 - 1)] = -value_to_sum
+            current_laten_params[int(action - 1024 - 1)] -= (value_to_sum / 100) * current_laten_params[
+                int(action - 1024 - 1)]
+        elif action > 0:
+            self._old_action[int(action - 1)] = value_to_sum
+            current_laten_params[int(action - 1)] += (value_to_sum / 100) * current_laten_params[int(action - 1)]
+
+        new_latent_params = current_laten_params
+        return new_latent_params
+
+
+class BoxActionLDEnv(LDEnv):
+    def __init__(self, models, data_env, rl_config):
+        super(BoxActionLDEnv, self).__init__(models, data_env, rl_config)
+
+        delta_action = (self.delta_value/100)*abs(self.data_env['max_values_latent']-self.data_env['min_values_latent'])
+        # Define action and observation space
+        # They must be gym.spaces objects
+        # self.action_space = spaces.Box(low=-np.array(1024), high=np.array(1024), dtype=np.int64)
+        self.action_space = Box(low=-delta_action, high=delta_action,
+                                dtype=np.float32)
+
+    def update_latent(self, current_laten_params, action):
+        self._old_action = action
+        current_laten_params += action
+        return current_laten_params
+
+class AirFoilLDenv(BoxActionLDEnv):
+    def __init__(self, models, data_env, rl_config):
+        super(AirFoilLDenv, self).__init__(models, data_env, rl_config)
+
+        # load parameters for fitting
+        self.fit_params = rl_config['fit_params']
+
+    def fit_current_geom(self, current_geom):
+        geom = current_geom
+        geom = geom[geom[:,0]>self.fit_params['th_x']]
+        fitting_curve, fitting_error = self.models['fit_geom'](geom, order=self.fit_params['order'],
+                                                   sub_geom=self.fit_params['sub_geom'])
+
+        fitting_reward = (1/fitting_error) * float(self.fit_params['alpha'])
+
+        return fitting_curve, fitting_reward
+
+    def get_reward(self, state, ref_value, episode_ended:bool= False):
+        eff_reward = super(AirFoilLDenv, self).get_reward(state, ref_value, episode_ended=episode_ended )
+
+        if episode_ended:
+            current_laten_params = self.get_latent_data_from_state()
+            self._current_geom = decode(self.models, current_laten_params)
+
+            _, fitting_reward = self.fit_current_geom(self._current_geom[0])
+        else:
+            fitting_reward = 0
+
+        return eff_reward + fitting_reward
+
+    def reset(self):
+        """
+        Important: the observation must be a numpy array
+        :return: (np.array)
+        """
+        super(AirFoilLDenv, self).reset()
+
+        self.ref_value = self.get_ref_value()
+
+        self._starting_geom = np.expand_dims(self.data_env['origin_geom'][self.current_index], axis=0)
+        self._starting_geom = self.models['denorm_geom'](self._starting_geom, self.models['scaler_geom']['min_y'],
+                                                         self.models['scaler_geom']['max_y'])
+
+        return self._get_obs()
+
+    def get_ref_value(self):
         Cl = self._state[-2]
         Cd = self._state[-1]
 
         current_value = Cl / Cd
-
-        return self._get_obs(), reward, self._episode_ended, {'best_value_obtained': self.ref_value,
-                                                              'current_value': current_value}
+        return current_value
 
     def render(self,  mode="human"):
         # Starting Geom
@@ -291,55 +362,3 @@ class LDEnv(gym.Env):
         plt.title('Action')
         plt.show()
 
-
-
-
-class DiscreteActionLDEnv(LDEnv):
-    def __init__(self, models, data_env, rl_config):
-        super(DiscreteActionLDEnv, self).__init__(models, data_env, rl_config)
-
-        # the actions are divided in this way
-        # 0 I do nothing
-        # 1-> Number of latent parameters: I add to the latent amount
-        # Number of latent parameters+1-> End:  subtract from the latent equivalent
-        self.action_space = Discrete(2 * rl_config['delta_value'] * self._number_of_latent_parameters + 1)
-
-
-    def update_latent(self, current_laten_params, action):
-        if action == 0:
-            return current_laten_params
-
-        value_to_sum = math.floor(action / 2048) + 1
-
-        if action > 2 * self._number_of_latent_parameters + 1:
-            action = action - ((2 * self._number_of_latent_parameters) * (value_to_sum - 1))
-
-        self._old_action = np.zeros(current_laten_params.shape)
-
-        if action > self._number_of_latent_parameters:
-            self._old_action[int(action - 1024 - 1)] = -value_to_sum
-            current_laten_params[int(action - 1024 - 1)] -= (value_to_sum / 100) * current_laten_params[
-                int(action - 1024 - 1)]
-        elif action > 0:
-            self._old_action[int(action - 1)] = value_to_sum
-            current_laten_params[int(action - 1)] += (value_to_sum / 100) * current_laten_params[int(action - 1)]
-
-        new_latent_params = current_laten_params
-        return new_latent_params
-
-
-class BoxActionLDEnv(LDEnv):
-    def __init__(self, models, data_env, rl_config):
-        super(BoxActionLDEnv, self).__init__(models, data_env, rl_config)
-
-        delta_action = (self.delta_value/100)*abs(self.data_env['max_values_latent']-self.data_env['min_values_latent'])
-        # Define action and observation space
-        # They must be gym.spaces objects
-        # self.action_space = spaces.Box(low=-np.array(1024), high=np.array(1024), dtype=np.int64)
-        self.action_space = Box(low=-delta_action, high=delta_action,
-                                dtype=np.float32)
-
-    def update_latent(self, current_laten_params, action):
-        self._old_action = action
-        current_laten_params += action
-        return current_laten_params

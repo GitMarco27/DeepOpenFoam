@@ -40,11 +40,3 @@ agent_config:
   # 2. MlpLstmPolicy
   # 3. MlpLnLstmPolicy
   policy_network: MlpPolicy
-
-
-fit_params:
-  order: 9
-  sub_geom: 1
-  alpha: 0.02162995824037003
-  th_x: 0.01
-
