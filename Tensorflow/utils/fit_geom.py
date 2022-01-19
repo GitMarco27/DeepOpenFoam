@@ -61,10 +61,12 @@ def fit_geom(geom, order: int = 10, sub_geom: int = 2, function_string: str = 'f
 
     curv = {
         'lower': {
-            'all_curves': []
+            'all_curves': [],
+            'all_models': []
         },
         'upper': {
-            'all_curves': []
+            'all_curves': [],
+            'all_models': []
         }
     }
 
@@ -87,6 +89,9 @@ def fit_geom(geom, order: int = 10, sub_geom: int = 2, function_string: str = 'f
         curv['lower']['all_curves'].append(np.array([x_line_l, y_line_l]).T)
         curv['upper']['all_curves'].append(np.array([x_line_h, y_line_h]).T)
 
+        curv['lower']['all_models'].append(popt_l)
+        curv['upper']['all_models'].append(popt_h)
+
     fitting_error = fitting_error / sub_geom
     return curv, fitting_error
 
@@ -96,3 +101,45 @@ def plot_fit_curve(curvs, color='black'):
         plt.plot(curv[:, 0], curv[:, 1], color=color)
     for curv in curvs['upper']['all_curves']:
         plt.plot(curv[:, 0], curv[:, 1] , color=color)
+
+def calc_y_distance(fitting_curve, fit_params, isPlotTrue: bool = False):
+    model_lower = fitting_curve['lower']['all_models'][0]
+    model_upper = fitting_curve['upper']['all_models'][0]
+
+    x_line = np.linspace(start=fit_params['th_x'], stop=fit_params['th_x_max'], num=150)
+
+    y_lower = fit_pol(x_line, *model_lower.tolist())
+    y_upper = fit_pol(x_line, *model_upper.tolist())
+
+    y_distance = y_upper - y_lower
+
+    min_distance = y_distance.min()
+
+    abnormal_points = min_distance <= fit_params['y_distance_th']
+
+    if abnormal_points:
+        x_line_th = x_line[y_distance < fit_params['y_distance_th']]
+        min_anomaly_x = x_line_th.min()
+        max_anomaly_x = x_line_th.max()
+
+        edges_anomalous_region = {
+            'min_x': min_anomaly_x,
+            'max_x': max_anomaly_x
+        }
+    else:
+        edges_anomalous_region = {}
+
+    if isPlotTrue:
+        fig, ax = plt.subplots(2, figsize=(10, 10))
+        ax[0].hist(y_distance, bins=100)
+        ax[0].set_title('Distance Histogram')
+
+        ax[1].plot(x_line, y_lower, c='blue')
+        ax[1].plot(x_line, y_upper, c='blue')
+        if abnormal_points:
+            ax[1].axvspan(min_anomaly_x, max_anomaly_x, facecolor='r', alpha=0.5)
+        ax[1].set_ylim([-0.35, 0.35])
+        ax[1].set_xlim([-0.02, 1.02])
+        ax[1].set_title('Geometry')
+        plt.show()
+    return abnormal_points, edges_anomalous_region

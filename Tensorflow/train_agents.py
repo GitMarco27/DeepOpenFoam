@@ -21,7 +21,7 @@ from stable_baselines3 import DDPG, TD3, PPO, A2C, DQN, HER, SAC
 from RL_Tools.rl_uitls.plot_curves import plot_results
 from RL_Tools.rl_uitls.SaveBestModelCallback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.callbacks import EvalCallback
-from utils.fit_geom import fit_geom, plot_fit_curve
+from utils.fit_geom import fit_geom, plot_fit_curve, calc_y_distance
 
 
 logging.basicConfig(level=logging.INFO)
@@ -83,6 +83,7 @@ def gen_data_for_envs(rl_config):
     ae_models['denorm_geom'] = denorm
     ae_models['fit_geom'] = fit_geom
     ae_models['plot_fit_curve'] = plot_fit_curve
+    ae_models['calc_y_distance'] = calc_y_distance
 
     # Generate Latent data for Training and Test
     train_latent, test_latent = pred_latent_data(ae_models, train_data, test_data)

@@ -59,12 +59,6 @@ class LDEnv(gym.Env):
     # index used for test a specific geometry
     select_geom_index = None
 
-    # List reward
-    _episode_rewards = {'Cl_reward': [],
-                        'Cd_reward': [],
-                        'Fitting_reward': [],
-                        'Sum_reward': []}
-
     def __init__(self, models, data_env, rl_config):
         super(LDEnv, self).__init__()
 
@@ -148,11 +142,6 @@ class LDEnv(gym.Env):
         :return: (np.array)
         """
         self._episode_ended = False
-
-        self._episode_rewards = {'Cl_reward': [],
-                                 'Cd_reward': [],
-                                 'Fitting_reward': [],
-                                 'Sum_reward': []}
 
         if self.select_geom_index is not None:
             self.current_index = self.select_geom_index
@@ -272,6 +261,12 @@ class AirFoilLDenv(BoxActionLDEnv):
         # load parameters for fitting
         self.fit_params = rl_config['fit_params']
 
+        # List reward
+        _episode_rewards = {'Cl_reward': [],
+                            'Cd_reward': [],
+                            'Fitting_reward': [],
+                            'Sum_reward': []}
+
     def fit_current_geom(self, current_geom):
         geom = current_geom
         geom = geom[geom[:,0]>self.fit_params['th_x']]
@@ -280,7 +275,8 @@ class AirFoilLDenv(BoxActionLDEnv):
 
         fitting_reward = (1/fitting_error) * float(self.fit_params['alpha'])
 
-        return fitting_curve, fitting_reward
+        abnormal_points, edges_anomalous_region = self.models['calc_y_distance'](fitting_curve, self.fit_params)
+        return fitting_curve, fitting_reward, abnormal_points, edges_anomalous_region
 
     def get_reward(self, state, ref_value, episode_ended:bool= False):
         eff_reward = super(AirFoilLDenv, self).get_reward(state, ref_value, episode_ended=episode_ended )
@@ -289,7 +285,10 @@ class AirFoilLDenv(BoxActionLDEnv):
             current_laten_params = self.get_latent_data_from_state()
             self._current_geom = decode(self.models, current_laten_params)
 
-            _, fitting_reward = self.fit_current_geom(self._current_geom[0])
+            _, fitting_reward,abnormal_points, _  = self.fit_current_geom(self._current_geom[0])
+
+            if abnormal_points:
+                return 0
         else:
             fitting_reward = 0
 
@@ -307,7 +306,10 @@ class AirFoilLDenv(BoxActionLDEnv):
         self._starting_geom = np.expand_dims(self.data_env['origin_geom'][self.current_index], axis=0)
         self._starting_geom = self.models['denorm_geom'](self._starting_geom, self.models['scaler_geom']['min_y'],
                                                          self.models['scaler_geom']['max_y'])
-
+        self._episode_rewards = {'Cl_reward': [],
+                                 'Cd_reward': [],
+                                 'Fitting_reward': [],
+                                 'Sum_reward': []}
         return self._get_obs()
 
     def get_ref_value(self):
@@ -325,7 +327,7 @@ class AirFoilLDenv(BoxActionLDEnv):
         current_laten_params = self.get_latent_data_from_state()
         self._current_geom = decode(self.models, current_laten_params)
 
-        fitting_curve, fitting_reward = self.fit_current_geom(self._current_geom[0])
+        fitting_curve, fitting_reward, abnormal_points, edges_anomalous_region = self.fit_current_geom(self._current_geom[0])
 
         gv = self.calculate_global_variabls(current_laten_params)
         # salve current reward
@@ -368,6 +370,10 @@ class AirFoilLDenv(BoxActionLDEnv):
 
         self.models['plot_fit_curve'](fitting_curve, color_points)
         plt.scatter(self._current_geom[0][:, 0], self._current_geom[0][:, 1], c=color_points, s=15, edgecolor='k')
+
+        if abnormal_points:
+            plt.axvspan(edges_anomalous_region['min_x'], edges_anomalous_region['max_x'], facecolor='r', alpha=0.5)
+
         plt.ylim([-0.35, 0.35])
         plt.xlim([-0.02, 1.02])
 
@@ -393,52 +399,3 @@ class AirFoilLDenv(BoxActionLDEnv):
         plt.show()
 
 
-class DiscreteActionLDEnv(LDEnv):
-    def __init__(self, models, data_env, rl_config):
-        super(DiscreteActionLDEnv, self).__init__(models, data_env, rl_config)
-
-        # the actions are divided in this way
-        # 0 I do nothing
-        # 1-> Number of latent parameters: I add to the latent amount
-        # Number of latent parameters+1-> End:  subtract from the latent equivalent
-        self.action_space = Discrete(2 * rl_config['delta_value'] * self._number_of_latent_parameters + 1)
-
-    def update_latent(self, current_laten_params, action):
-        if action == 0:
-            return current_laten_params
-
-        value_to_sum = math.floor(action / 2048) + 1
-
-        if action > 2 * self._number_of_latent_parameters + 1:
-            action = action - ((2 * self._number_of_latent_parameters) * (value_to_sum - 1))
-
-        self._old_action = np.zeros(current_laten_params.shape)
-
-        if action > self._number_of_latent_parameters:
-            self._old_action[int(action - 1024 - 1)] = -value_to_sum
-            current_laten_params[int(action - 1024 - 1)] -= (value_to_sum / 100) * current_laten_params[
-                int(action - 1024 - 1)]
-        elif action > 0:
-            self._old_action[int(action - 1)] = value_to_sum
-            current_laten_params[int(action - 1)] += (value_to_sum / 100) * current_laten_params[int(action - 1)]
-
-        new_latent_params = current_laten_params
-        return new_latent_params
-
-
-class BoxActionLDEnv(LDEnv):
-    def __init__(self, models, data_env, rl_config):
-        super(BoxActionLDEnv, self).__init__(models, data_env, rl_config)
-
-        delta_action = (self.delta_value / 100) * abs(
-            self.data_env['max_values_latent'] - self.data_env['min_values_latent'])
-        # Define action and observation space
-        # They must be gym.spaces objects
-        # self.action_space = spaces.Box(low=-np.array(1024), high=np.array(1024), dtype=np.int64)
-        self.action_space = Box(low=-delta_action, high=delta_action,
-                                dtype=np.float32)
-
-    def update_latent(self, current_laten_params, action):
-        self._old_action = action
-        current_laten_params += action
-        return current_laten_params
