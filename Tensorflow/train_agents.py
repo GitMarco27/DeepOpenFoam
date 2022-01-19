@@ -11,7 +11,7 @@ from stable_baselines3.common.monitor import Monitor
 from sklearn.model_selection import train_test_split
 
 from utils.utils import load_data, read_config, denorm
-from RL_Tools.Environments.LDEnvs import BoxActionLDEnv, DiscreteActionLDEnv
+from RL_Tools.Environments.LDEnvs import BoxActionLDEnv, DiscreteActionLDEnv, AirFoilLDenv
 from utils.load_ae_models import load_ae_models
 import yaml
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, VecFrameStack, SubprocVecEnv
@@ -135,13 +135,13 @@ if __name__ == '__main__':
         ae_models,data_env_train, data_env_test = gen_data_for_envs(rl_config)
 
         if rl_config['action_space']=='BoxSpaceAction':
-            gym_env_train = BoxActionLDEnv(ae_models, data_env_train, rl_config)
-            gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+            gym_env_train = AirFoilLDenv(ae_models, data_env_train, rl_config)
+            gym_env_eval = AirFoilLDenv(ae_models, data_env_test, rl_config)
 
             agent = possible_box_action_agents[rl_config['type_agent']]
         else:
             gym_env_train = DiscreteActionLDEnv(ae_models, data_env_train, rl_config)
-            gym_env_eval = BoxActionLDEnv(ae_models, data_env_test, rl_config)
+            gym_env_eval = DiscreteActionLDEnv(ae_models, data_env_test, rl_config)
 
             agent = possible_discrete_action_agents[rl_config['type_agent']]
 

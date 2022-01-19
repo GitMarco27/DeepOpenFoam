@@ -32,7 +32,7 @@ class LDEnv(gym.Env):
     # max number of steps per episode
     num_steps_max = None
 
-    current_step = 0
+    num_step = 0
 
     # The state is composed of the latent parameters and other global parameters
     _state = None
