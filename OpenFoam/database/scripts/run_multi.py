@@ -1,5 +1,6 @@
 import argparse
 import os
+import numpy as np
 
 if __name__ == '__main__':
     os.chdir(os.getcwd().replace('scripts', ''))
@@ -7,8 +8,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generating a new databases')
     parser.add_argument('--n', type=int,
                         help='Number of parallel databases')
+    parser.add_argument('--start', type=int,
+                        help='start')
     parser.add_argument('--clear',
-                        action='store_false',
+                        action='store_true',
                         help='Re-start the database')
 
     args = parser.parse_args()
@@ -18,7 +21,7 @@ if __name__ == '__main__':
             os.system('rm -r data')
     os.mkdir('data') if not os.path.exists('data') else None
 
-    for i in range(args.n):
+    for i in range(args.start, args.n):
         path = os.path.join('data', str(i))
         os.mkdir(path)
         os.system(f'cp -r case {path}/case')

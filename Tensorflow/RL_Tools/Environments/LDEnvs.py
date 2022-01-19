@@ -57,7 +57,13 @@ class LDEnv(gym.Env):
     ref_value = 10000
 
     # index used for test a specific geometry
-    select_geom_index= None
+    select_geom_index = None
+
+    # List reward
+    _episode_rewards = {'Cl_reward': [],
+                        'Cd_reward': [],
+                        'Fitting_reward': [],
+                        'Sum_reward': []}
 
     def __init__(self, models, data_env, rl_config):
         super(LDEnv, self).__init__()
@@ -95,8 +101,8 @@ class LDEnv(gym.Env):
         self.data_env['max_gv'] = max_gv
 
         # Observation space
-        min_value_observation = np.array(self.data_env['min_values_latent'].tolist()+self.data_env['min_gv'].tolist())
-        max_value_observation = np.array(self.data_env['max_values_latent'].tolist()+self.data_env['max_gv'].tolist())
+        min_value_observation = np.array(self.data_env['min_values_latent'].tolist() + self.data_env['min_gv'].tolist())
+        max_value_observation = np.array(self.data_env['max_values_latent'].tolist() + self.data_env['max_gv'].tolist())
 
         self.observation_space = Box(low=min_value_observation, high=max_value_observation, dtype=np.float32)
 
@@ -117,7 +123,7 @@ class LDEnv(gym.Env):
         min_gv = pd_all_gv.min().to_numpy()
         max_gv = pd_all_gv.max().to_numpy()
 
-        return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1) , max_gv.reshape(-1),
+        return min_latent.reshape(-1), max_latent.reshape(-1), min_gv.reshape(-1), max_gv.reshape(-1),
 
     def _get_obs(self):
         return np.array(self._state)
@@ -133,6 +139,7 @@ class LDEnv(gym.Env):
 
     def calculate_global_variabls(self, current_laten_params):
         global_variables = pred_global_variables(current_laten_params, self.models)
+
         return global_variables
 
     def reset(self):
@@ -141,6 +148,11 @@ class LDEnv(gym.Env):
         :return: (np.array)
         """
         self._episode_ended = False
+
+        self._episode_rewards = {'Cl_reward': [],
+                                 'Cd_reward': [],
+                                 'Fitting_reward': [],
+                                 'Sum_reward': []}
 
         if self.select_geom_index is not None:
             self.current_index = self.select_geom_index
@@ -305,7 +317,7 @@ class AirFoilLDenv(BoxActionLDEnv):
         current_value = Cl / Cd
         return current_value
 
-    def render(self,  mode="human"):
+    def render(self, mode="human"):
         # Starting Geom
         starting_geom = self._starting_geom
 
@@ -315,16 +327,23 @@ class AirFoilLDenv(BoxActionLDEnv):
 
         fitting_curve, fitting_reward = self.fit_current_geom(self._current_geom[0])
 
+        gv = self.calculate_global_variabls(current_laten_params)
+        # salve current reward
+        self._episode_rewards['Cl_reward'].append(10 * gv[0])
+        self._episode_rewards['Cd_reward'].append(1 / gv[1])
+        self._episode_rewards['Fitting_reward'].append(fitting_reward)
+        self._episode_rewards['Sum_reward'].append(fitting_reward+self._episode_rewards['Cl_reward'][-1]+self._episode_rewards['Cd_reward'][-1])
+
         clear_output(wait=True)
 
-        starting_value =self.ref_value
+        starting_value = self.ref_value
 
         Cl = self._state[-2]
         Cd = self._state[-1]
 
         current_value = Cl / Cd
 
-        current_value =current_value
+        current_value = current_value
         delta = round(current_value - starting_value, 4)
 
         if delta < 0:
@@ -338,11 +357,12 @@ class AirFoilLDenv(BoxActionLDEnv):
         colors[self._old_action < 0] = 'red'
         colors[self._old_action == 0] = 'blue'
 
-        plt.figure(figsize=(15, 15))
-        plt.subplot(2, 1, 1)
+        fig = plt.figure(figsize=(15, 15))
+        fig.add_subplot(311)
         plt.title(
-            f'Env: step {self.num_step}, current_value {round(current_value, 4)}, starting eff : {round(starting_value, 4)}, '
-            f'Cl: {round(Cl, 4)}, Cd {round(Cd, 4)}, \nDelta eff: {delta} , Fitting Reward: {fitting_reward}', fontsize=16)
+            f'Env Step {self.num_step}:     starting_ratio : {round(starting_value, 4)} -----> current_ratio {round(current_value, 4)} = Delta ratio: {delta}\n'
+            f'Cl: {round(Cl, 4)}    Cd {round(Cd, 4)} ',
+            fontsize=16)
         plt.plot(starting_geom[0][:, 0], starting_geom[0][:, 1], c='blue')
         plt.fill(starting_geom[0][:, 0], starting_geom[0][:, 1], color='blue', alpha=0.2)
 
@@ -351,14 +371,74 @@ class AirFoilLDenv(BoxActionLDEnv):
         plt.ylim([-0.35, 0.35])
         plt.xlim([-0.02, 1.02])
 
-        plt.subplot(2, 2, 3)
+        fig.add_subplot(312)
+        plt.plot(self._episode_rewards['Cl_reward'], label='Cl_reward')
+        plt.plot(self._episode_rewards['Cd_reward'], label='Cd_reward')
+        plt.plot(self._episode_rewards['Fitting_reward'], label='Fitting_reward')
+        plt.plot(self._episode_rewards['Sum_reward'], label='Sum_reward', color='C3')
+        plt.legend(loc='upper left', prop={'size': 15})
+        # plt.ylim([-10, 100])
+        plt.title('Rewards')
+
+        fig.add_subplot(325)
         plt.scatter(np.arange(len(self._state[:self._number_of_latent_parameters])),
-                         self._state[:self._number_of_latent_parameters], c=colors)
+                    self._state[:self._number_of_latent_parameters], c=colors)
         plt.plot(self.data_env['max_values_latent'])
         plt.title('Current latent parameters')
 
-        plt.subplot(2, 2, 4)
+        fig.add_subplot(326)
         plt.scatter(np.arange(len(self._old_action)), self._old_action, c=colors)
         plt.title('Action')
+
         plt.show()
 
+
+class DiscreteActionLDEnv(LDEnv):
+    def __init__(self, models, data_env, rl_config):
+        super(DiscreteActionLDEnv, self).__init__(models, data_env, rl_config)
+
+        # the actions are divided in this way
+        # 0 I do nothing
+        # 1-> Number of latent parameters: I add to the latent amount
+        # Number of latent parameters+1-> End:  subtract from the latent equivalent
+        self.action_space = Discrete(2 * rl_config['delta_value'] * self._number_of_latent_parameters + 1)
+
+    def update_latent(self, current_laten_params, action):
+        if action == 0:
+            return current_laten_params
+
+        value_to_sum = math.floor(action / 2048) + 1
+
+        if action > 2 * self._number_of_latent_parameters + 1:
+            action = action - ((2 * self._number_of_latent_parameters) * (value_to_sum - 1))
+
+        self._old_action = np.zeros(current_laten_params.shape)
+
+        if action > self._number_of_latent_parameters:
+            self._old_action[int(action - 1024 - 1)] = -value_to_sum
+            current_laten_params[int(action - 1024 - 1)] -= (value_to_sum / 100) * current_laten_params[
+                int(action - 1024 - 1)]
+        elif action > 0:
+            self._old_action[int(action - 1)] = value_to_sum
+            current_laten_params[int(action - 1)] += (value_to_sum / 100) * current_laten_params[int(action - 1)]
+
+        new_latent_params = current_laten_params
+        return new_latent_params
+
+
+class BoxActionLDEnv(LDEnv):
+    def __init__(self, models, data_env, rl_config):
+        super(BoxActionLDEnv, self).__init__(models, data_env, rl_config)
+
+        delta_action = (self.delta_value / 100) * abs(
+            self.data_env['max_values_latent'] - self.data_env['min_values_latent'])
+        # Define action and observation space
+        # They must be gym.spaces objects
+        # self.action_space = spaces.Box(low=-np.array(1024), high=np.array(1024), dtype=np.int64)
+        self.action_space = Box(low=-delta_action, high=delta_action,
+                                dtype=np.float32)
+
+    def update_latent(self, current_laten_params, action):
+        self._old_action = action
+        current_laten_params += action
+        return current_laten_params

@@ -1,11 +1,13 @@
-style_matplotlib: seaborn
+#seaborn
+# bmh
+style_matplotlib: Solarize_Light2
 
 AE:
   model_path: ./results/10001/checkpoint
 
 Re_Training:
   active: False
-  model_path: None
+  model_path: agent_13_01_2022 12_48_05
 
 number_of_global_variables: 2
 steps_per_episode: 40
@@ -45,6 +47,6 @@ agent_config:
 fit_params:
   order: 9
   sub_geom: 1
-  alpha: 0.02162995824037003
+  alpha: 0.010814979120185
   th_x: 0.01
 

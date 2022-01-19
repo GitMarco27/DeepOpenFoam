@@ -151,7 +151,12 @@ if __name__ == '__main__':
         env_eval = wrap_env(gym_env_eval)
 
         # create agent
-        model = agent(rl_config['agent_config']['policy_network'], env_train, verbose=0, tensorboard_log='logs/tb_stable_baseline_logs/'+agent_name)
+        model = agent(rl_config['agent_config']['policy_network'], env_train, verbose=0,
+                      tensorboard_log='logs/tb_stable_baseline_logs/' + agent_name)
+
+        # if rl_config['Re_Training']['active'] == True:
+        #     model = agent.load(results_path+'/best_model_agent.zip',env_train, tensorboard_log='logs/tb_stable_baseline_logs/' + agent_name)
+
 
         # Create Callbacks
         callback = SaveOnBestTrainingRewardCallback(check_freq=100, log_dir=results_path)

@@ -19,16 +19,18 @@ if __name__ == '__main__':
     xe = 1
     ye = 0
 
-    baseline = 0.2
+    baseline_upper = 0.1
+    baseline_lower = 0.0
 
     x_u = np.array([xs, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, xe])
     x_l = np.array([xs, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, xe])
 
-    y_u = np.array([ys] + [baseline] * 10 + [ye]) + noise(12, eta=0.2)
-    y_l = np.array([ys] + [-baseline] * 10 + [ye]) + noise(12, eta=0.2)
+    y_u = np.array([ys] + [baseline_upper] * 10 + [ye]) + noise(12, eta=0.1)
+    y_l = np.array([ys] + [-baseline_lower] * 10 + [ye]) + noise(12, eta=0.15)
 
-    y_u[1] = 0.05 if y_u[1] <= 0.05 else y_u[1]
-    y_l[1] = -y_u[1]
+    y_u[1] = 0.03 if y_u[1] <= 0.03 else y_u[1]
+    y_l[1] = -0.03 if y_l[1] >= -0.03 else y_l[1]
+    # y_l[1] = -y_u[1]
 
     if os.path.exists('mesh/bez_control_points.geo'):
         # print('Deleting old parameters...')
